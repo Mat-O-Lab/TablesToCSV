@@ -1,0 +1,76 @@
+{
+  "openapi": "3.0.0",
+  "info":{
+      "description": "XLStoCSV",
+      "version": "1.0.0",
+      "title": "XLStoCSV",
+      "contact": {
+          "name": "Thomas Hanke",
+          "email": "thomas.hanke@imws.fraunhofer.de"
+      },
+      "license": {
+          "name": "Apache 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+      }
+  },
+  "servers":[
+      {
+          "url": "/"
+      }
+  ],
+  "schemes": [
+    "https",
+    "http"
+  ],
+  "paths": {
+    "/api/xls2csv": {
+            "post": {
+                "tags": [
+                    "xls"
+                ],
+                "summary": "xls -> csvs",
+                "description": "Create a zipfile containing all sheets from a xls file as csv.",
+                "requestBody": {
+                  "required": "true",
+                  "content": {
+
+                  }
+                },
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {
+                        "200": {
+                            "description": "converted xls file into many csv files."
+
+                          },
+                        "404": {
+                            "description": "File not found."
+                            },
+
+                        "500":{
+                            "description": "Internal server error"
+                        }
+
+                    }
+                }
+            }
+  },
+
+  "components" : {
+    "schemas" : {
+
+    }
+  },
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "name": "api_key",
+      "in": "header"
+    }
+  },
+  "definitions": {
+    "ApiResponse": {
+    }
+  }
+}
