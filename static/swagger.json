@@ -1,76 +1,101 @@
 {
   "openapi": "3.0.0",
-  "info":{
-      "description": "XLStoCSV",
-      "version": "1.0.0",
-      "title": "XLStoCSV",
-      "contact": {
-          "name": "Thomas Hanke",
-          "email": "thomas.hanke@imws.fraunhofer.de"
-      },
-      "license": {
-          "name": "Apache 2.0",
-          "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-      }
+  "info": {
+    "description": "TablesToCSV",
+    "version": "1.0.0",
+    "title": "TablesToCSV",
+    "contact": {
+      "name": "Thomas Hanke",
+      "email": "thomas.hanke@imws.fraunhofer.de"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
   },
-  "servers":[
-      {
-          "url": "/"
-      }
-  ],
-  "schemes": [
-    "https",
-    "http"
+  "servers": [
+    {
+      "url": "/"
+    }
   ],
   "paths": {
-    "/api/xls2csv": {
-            "post": {
-                "tags": [
-                    "xls"
-                ],
-                "summary": "xls -> csvs",
-                "description": "Create a zipfile containing all sheets from a xls file as csv.",
-                "requestBody": {
-                  "required": "true",
-                  "content": {
-
-                  }
-                },
-                "produces": [
-                    "application/json"
-                ],
-                "responses": {
-                        "200": {
-                            "description": "converted xls file into many csv files."
-
-                          },
-                        "404": {
-                            "description": "File not found."
-                            },
-
-                        "500":{
-                            "description": "Internal server error"
-                        }
-
-                    }
+    "/api/xls_to_csv": {
+      "get": {
+        "tags": [
+          "XLSToCSV"
+        ],
+        "summary": "Convert the sheets of a xls file to many csv files",
+        "description": "Returns a .zip file, containing all sheets of the specified xls file as csv files.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "url",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Url to a xls file"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Zip file containing all csv sheets of the xls file at the specified url",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
                 }
+              }
             }
-  },
-
-  "components" : {
-    "schemas" : {
-
-    }
-  },
-  "securityDefinitions": {
-    "api_key": {
-      "type": "apiKey",
-      "name": "api_key",
-      "in": "header"
-    }
-  },
-  "definitions": {
-    "ApiResponse": {
+          },
+          "404": {
+            "description": "File not found. Please check the validity of the url, you provided"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/pdf_to_csv": {
+      "get": {
+        "tags": [
+          "PDFToCSV"
+        ],
+        "summary": "Convert a textbased pdf file into a csv file",
+        "description": "Returns a csv file containing all tables found in the pdf file.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "url",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Url to a pdf file"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A csv file containing all tables found inside the pdf file",
+            "content": {
+              "application/csv": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "File not found."
+          },
+          "500": {
+            "description": "Internal server error, check the syntax of your diagram."
+          }
+        }
+      }
     }
   }
 }
