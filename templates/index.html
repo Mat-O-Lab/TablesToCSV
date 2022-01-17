@@ -1,5 +1,5 @@
 {% extends "bootstrap/base.html" %}
-{% block title %}XLStoCSV{% endblock %}
+{% block title %}TablesToCSV{% endblock %}
 
 {% block head %}
 {{ super() }}
@@ -37,7 +37,7 @@
       </p>
 
 
-      <form class='pb-3' method="post" action="{{ url_for('api') }}">
+      <form class='pb-3' method="post" action="{{ url_for('xls_to_csv') }}">
         <div class="mb-3">
           {{ start_form.csrf_token }}
           {{ start_form.data_url.label }}
@@ -59,7 +59,7 @@
     </div>
 </main>
 <footer class="pt-3 my-4 text-center text-muted border-top">
-  <span class="site-footer-owner"><a href="https://github.com/rfechner/XLStoCSV">XLStoCSV</a> is maintained by <a href="https://matolab.org"><img src="{{ logo }}" width="5%" alt="mat-o-lab-logo"/></a>.</span>
+  <span class="site-footer-owner"><a href="https://github.com/rfechner/XLStoCSV">TablesToCSV</a> is maintained by <a href="https://matolab.org"><img src="{{ logo }}" width="5%" alt="mat-o-lab-logo"/></a>.</span>
 </footer>
 {% endblock %}
 

@@ -8,3 +8,4 @@ flask-wtf
 flask-bootstrap
 wtforms
 requests
+xlrd

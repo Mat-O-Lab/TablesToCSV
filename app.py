@@ -34,7 +34,7 @@ swaggerui_blueprint = get_swaggerui_blueprint(
     SWAGGER_URL,
     API_URL,
     config={
-        "app_name": "XLStoCSV"
+        "app_name": "TablesToCSV"
     }
 )
 
@@ -55,8 +55,8 @@ def index():
     start_form = StartForm()
     return render_template("index.html", logo=logo, start_form=start_form)
 
-@app.route("/api", methods=["GET", "POST"])
-def api():
+@app.route("/api/xls_to_csv", methods=["GET", "POST"])
+def xls_to_csv():
     if request.method == 'POST':
 
         url = request.form.get("data_url")
@@ -111,4 +111,4 @@ def api():
 
         return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
 
-    return render_template("index.html")
+    return redirect(url_for("index"))
