@@ -1,7 +1,11 @@
 # TablesToCSV
 Aims to convert tables in pds or Excel Spreedsheets to a uniform CSV format
 
-# REQUIREMENTS
+# REQUIREMENTS 
+
+Please note that this is a "quick and dirty" type of setup. For a clean setup, install all packages
+into a virtual evironment, using venv or anaconda. Alternatively one could use Docker. 
+<br>
 
 1) Download the repository by either cloning the repository with git
 
@@ -20,11 +24,6 @@ or download the repository as .zip file and unpack it to a location of your choi
    
 4) Use pip, the package manager included in your python download to install all required packages. To
    do this, open up a terminal and type in the command:
-
-```cmd
-pip install -r requirements.txt
-```
-or
 
 ```cmd
 python -m pip install -r requirements.txt
