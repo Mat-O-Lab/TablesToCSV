@@ -9,3 +9,4 @@ flask-bootstrap
 wtforms
 requests
 xlrd
+colorama
