@@ -32,7 +32,7 @@ python -m pip install -r requirements.txt
 
 5) After installing all requiered packages, you are ready to start the server. Navigate to the directory in
 which you have unpacked/stored a copy of this repository. Start a terminal in this directory.
-To do this in Windows, type "cmd" into the path-bar at the top of your file explorer.
+To do this in Windows, type "cmd" into the path-bar at the top of your file explorer and hit the Enter key.
 ![cmd_in_explorer](https://user-images.githubusercontent.com/72997461/149930925-0a5ff53d-a318-4224-9b78-b14a5b7b90a3.png)
 
 6) A terminal should have opened. To start the local server, simply type the following command:
