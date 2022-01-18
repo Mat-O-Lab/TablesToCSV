@@ -22,19 +22,18 @@ or download the repository as .zip file and unpack it to a location of your choi
 3) If not done already, you should add the path to python.exe to your PATH.
    To do so, either tick the box while installing python or adjust the environment variables on your machine.
    
-4) Use pip, the package manager included in your python download to install all required packages. To
+4) Navigate to the directory in which you have unpacked/stored a copy of this repository. Start a terminal in this directory.
+To do this in Windows, type "cmd" into the path-bar at the top of your file explorer and hit the Enter key.
+![cmd_in_explorer](https://user-images.githubusercontent.com/72997461/149930925-0a5ff53d-a318-4224-9b78-b14a5b7b90a3.png)
+
+5) Use pip, the package manager included in your python download to install all required packages. To
    do this, open up a terminal and type in the command:
 
 ```cmd
 python -m pip install -r requirements.txt
 ```
 
-5) After installing all requiered packages, you are ready to start the server. Navigate to the directory in
-which you have unpacked/stored a copy of this repository. Start a terminal in this directory.
-To do this in Windows, type "cmd" into the path-bar at the top of your file explorer and hit the Enter key.
-![cmd_in_explorer](https://user-images.githubusercontent.com/72997461/149930925-0a5ff53d-a318-4224-9b78-b14a5b7b90a3.png)
-
-6) A terminal should have opened. To start the local server, simply type the following command:
+6) To start the local server, simply type the following command:
 
 ```cmd
 python wsgi.py
