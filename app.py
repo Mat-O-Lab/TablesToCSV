@@ -4,12 +4,14 @@ import os
 import zipfile
 
 import requests
-
+from pdf import coordinates_copy
+from pdf.converter_pdf import *
+from pdf.converter_pdf import OUTPUT_DIR
 from os import remove
 from io import BytesIO
 from flask import flash, Flask, request, render_template, send_file, url_for, redirect
 from flask_swagger_ui import get_swaggerui_blueprint
-from flask_wtf import FlaskForm
+from flask_wtf import FlaskForm, Form
 from flask_bootstrap import Bootstrap
 from wtforms import StringField
 
@@ -19,7 +21,7 @@ from wtforms.validators import DataRequired, URL
 from werkzeug.utils import secure_filename
 from config import config
 
-ALLOWED_EXTENSIONS = {'xls', 'xlsx'}
+ALLOWED_EXTENSIONS = {'xls', 'xlsx', 'pdf'}
 config_name = os.environ.get("APP_MODE") or "development"
 
 app = Flask(__name__)
@@ -46,14 +48,91 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-class StartForm(FlaskForm):
-    data_url = StringField('URL to xls file', validators=[DataRequired(), URL()], description='Paste URL to a excel file containing data-sheets')
+class ExcelForm(FlaskForm):
+    data_url = StringField("Excel to csv", validators=[DataRequired(), URL()], description='Paste URL to a excel file containing data-sheets')
+
+class PdfForm(FlaskForm):
+    data_url = StringField("Pdf to csv", validators=[DataRequired(), URL()], description='Paste URL to a text based pdf file containing tables')
+    settings = StringField("Settings", validators=[DataRequired(), URL()], description='Paste URL to a json settings file, matching the pdf')
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     logo = './static/resources/MatOLab-Logo.svg'
-    start_form = StartForm()
-    return render_template("index.html", logo=logo, start_form=start_form)
+    start_form = ExcelForm()
+    pdf_form = PdfForm()
+    return render_template("index.html", logo=logo, start_form=start_form, pdf_form=pdf_form)
+
+@app.route("/api/pdf_to_csv", methods=["GET", "POST"])
+def pdf_to_csv():
+    if request.method == 'POST':
+
+        url = request.form.get("data_url")
+        settings = request.form.get("settings")
+
+        if not allowed_file(url):
+            flash("cannot convert file with given extension!")
+            return redirect(url_for("index"))
+
+        if not settings.endswith('.json'):
+            flash("settings file was not given as .json file!")
+            return redirect(url_for("index"))
+
+
+        # we need to access the raw file from github, without html code
+        if "github.com" in url:
+            url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+
+        if "github.com" in settings:
+            settings = settings.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+
+        pdf_filename = secure_filename(url.rsplit("/", maxsplit=1)[1])
+        settings_filename = secure_filename(settings.rsplit("/", maxsplit=1)[1])
+
+
+        # write the files to local directory, the files are deleted again after conversion
+        response = requests.get(url)
+        output = open(pdf_filename, 'wb')
+        output.write(response.content)
+        output.close()
+
+        response = requests.get(settings)
+        output = open(settings_filename, 'wb')
+        output.write(response.content)
+        output.close()
+
+
+
+
+        tables = coordinates_copy.main(pdf_filename)
+
+        table_count = 0
+        for page, table_areas, image_size in tables:
+            bounding_box = convert_pixel_to_point(table_areas, image_size)
+            extract_tables(pdf_filename, settings_filename, page, bounding_box, table_count, False)
+            table_count += 1
+
+        # collect the csvs into a .zip file, then send the zipfile to the user
+        memory_file = BytesIO()
+        with zipfile.ZipFile(memory_file, 'w') as zf:
+            for dirname, subdirs, files in os.walk(OUTPUT_DIR):
+                zf.write(dirname)
+                for filename in files:
+                    zf.write(os.path.join(dirname, filename))
+        memory_file.seek(0)
+
+        # we're done with conversion, delete the local file.
+        remove(pdf_filename)
+        remove(settings_filename)
+
+        # remove all csvs in TMP_OUT
+        for dirname, subdirs, files in os.walk(OUTPUT_DIR):
+            for file in files:
+                os.remove(os.path.join(dirname, file))
+
+        return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
+
+    return redirect(url_for("index"))
+
 
 @app.route("/api/xls_to_csv", methods=["GET", "POST"])
 def xls_to_csv():
@@ -68,7 +147,8 @@ def xls_to_csv():
         # we need to access the raw file from github, without html code
         if "github.com" in url:
             url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
-    
+
+
         filename = secure_filename(url.rsplit("/", maxsplit=1)[1])
         
         # write the file to local directory, the file is deleted again after conversion

@@ -10,3 +10,5 @@ wtforms
 requests
 xlrd
 colorama
+opencv
+pdf2image
