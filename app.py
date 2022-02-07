@@ -1,7 +1,9 @@
 
 import pandas as pd
+import numpy as np
 import os
 import zipfile
+from timeit import default_timer as timer
 
 import requests
 from pdf import coordinates_copy
@@ -11,9 +13,9 @@ from os import remove
 from io import BytesIO
 from flask import flash, Flask, request, render_template, send_file, url_for, redirect
 from flask_swagger_ui import get_swaggerui_blueprint
-from flask_wtf import FlaskForm, Form
+from flask_wtf import FlaskForm
 from flask_bootstrap import Bootstrap
-from wtforms import StringField
+from wtforms import StringField, SubmitField
 
 from wtforms.validators import DataRequired, URL
 
@@ -22,6 +24,7 @@ from werkzeug.utils import secure_filename
 from config import config
 
 ALLOWED_EXTENSIONS = {'xls', 'xlsx', 'pdf'}
+ACCURACY_THRESHOLD = 95 # percent
 config_name = os.environ.get("APP_MODE") or "development"
 
 app = Flask(__name__)
@@ -54,6 +57,7 @@ class ExcelForm(FlaskForm):
 class PdfForm(FlaskForm):
     data_url = StringField("Pdf to csv", validators=[DataRequired(), URL()], description='Paste URL to a text based pdf file containing tables')
     settings = StringField("Settings", validators=[DataRequired(), URL()], description='Paste URL to a json settings file, matching the pdf')
+    submit = SubmitField("Start Conversion")
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -62,22 +66,26 @@ def index():
     pdf_form = PdfForm()
     return render_template("index.html", logo=logo, start_form=start_form, pdf_form=pdf_form)
 
+@app.route("/excalibur", methods=["GET", "POST"])
+def excalibur():
+    flash("redirect to excalibur webapp", "info")
+    return redirect(url_for("index"))
+
 @app.route("/api/pdf_to_csv", methods=["GET", "POST"])
 def pdf_to_csv():
     if request.method == 'POST':
-
         url = request.form.get("data_url")
         settings = request.form.get("settings")
 
         if not allowed_file(url):
-            flash("cannot convert file with given extension!")
+            flash("cannot convert file with given extension!", "info")
             return redirect(url_for("index"))
 
         if not settings.endswith('.json'):
-            flash("settings file was not given as .json file!")
+            flash("settings file was not given as .json file!", "info")
             return redirect(url_for("index"))
 
-
+        start = timer()
         # we need to access the raw file from github, without html code
         if "github.com" in url:
             url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
@@ -100,15 +108,19 @@ def pdf_to_csv():
         output.write(response.content)
         output.close()
 
-
-
-
+        # TODO: incorporate into converter_pdf
         tables = coordinates_copy.main(pdf_filename)
-
+        accuracy_list = []
         table_count = 0
         for page, table_areas, image_size in tables:
             bounding_box = convert_pixel_to_point(table_areas, image_size)
-            extract_tables(pdf_filename, settings_filename, page, bounding_box, table_count, False)
+            accuracy_dict = extract_tables(pdf_filename, settings_filename, page, bounding_box, table_count, False)
+
+            for k,v in accuracy_dict.items():
+                if v <= ACCURACY_THRESHOLD:
+                    flash(f"parsing {k} was unsuccessful with an accuracy of {v}%", "warning")
+                    accuracy_list.append(v)
+
             table_count += 1
 
         # collect the csvs into a .zip file, then send the zipfile to the user
@@ -129,6 +141,11 @@ def pdf_to_csv():
             for file in files:
                 os.remove(os.path.join(dirname, file))
 
+        # TODO: get accuracy, time out of conversion and flask message
+        end = timer()
+        mean_accuracy = np.mean(np.array(accuracy_list))
+        time_seconds = end - start  #  millis
+        flash(f"completed conversion of {filename} in {time_seconds} seconds, \nwith a mean accuracy of {mean_accuracy}%", "info")
         return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
 
     return redirect(url_for("index"))

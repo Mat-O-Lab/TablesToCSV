@@ -71,6 +71,13 @@
             "name": "url",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "settings",
+            "schema": {
+              "type": "string"
             },
             "required": true,
             "description": "Url to a pdf file"

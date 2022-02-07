@@ -10,7 +10,8 @@ OUTPUT_DIR = "TMP_OUT"
 # group rows -> row_tol=larger number
 # lattice: detecting smaller lines -> line_scale=larger number
 
-def extract_tables(pdf_path, settings_path, p, tab_ar, table_count, debug=False):
+def extract_tables(pdf_path, settings_path, p, tab_ar, table_count, debug=False) -> [float]:
+    accuracy = {}
     """
     extracting tables out of PDF files with Camelot
     2 modes: lattice and stream
@@ -61,7 +62,9 @@ def extract_tables(pdf_path, settings_path, p, tab_ar, table_count, debug=False)
             # export csv
             tables[i].to_csv(path_output)
 
-        return
+            accuracy[prefix + "_page_" + str(p) + "_table_" + str(table_count)] = tables[i].parsing_report["accuracy"]
+
+        return accuracy
 
 
 def convert_pixel_to_point(table_areas, image_size):
