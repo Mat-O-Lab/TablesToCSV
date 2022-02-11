@@ -14,5 +14,5 @@ services:
 
 networks:
   flask:
-    name: custom_network
+    name: TablesToCSV
     driver: bridge
