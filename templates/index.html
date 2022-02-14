@@ -26,15 +26,20 @@
       </a>
 </header>
 {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for category, message in messages %}
-       <div class="alert alert-{{ category }}" role="alert">
-       <button type="button" class="close" data-dismiss="alert">&times;</button>
-       {{ message }}
-       </div>
-    {% endfor %}
-  {% endif %}
+    <div class="container-fluid collapse {% if messages%} show {% endif %}" id="mappingForm">
+        <div class="card card-body">
+            {% if messages %}
+            {% for category, message in messages %}
+               <div class="alert alert-{{ category }}" role="alert">
+               <button type="button" class="close" data-dismiss="alert">&times;</button>
+               {{ message }}
+               </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+    </div>
 {% endwith %}
+
 <main class="bg-light rounded-3 px-3">
 
 

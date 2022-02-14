@@ -77,7 +77,7 @@ def pdf_to_csv():
         url = request.form.get("data_url")
         settings = request.form.get("settings")
 
-        if not allowed_file(url):
+        if not url.endswith('.pdf'):
             flash("cannot convert file with given extension!", "info")
             return redirect(url_for("index"))
 
