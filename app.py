@@ -3,15 +3,15 @@ import pandas as pd
 import numpy as np
 import os
 import zipfile
+import base64
 from timeit import default_timer as timer
 
 import requests
 from pdf import coordinates_copy
 from pdf.converter_pdf import *
 from pdf.converter_pdf import OUTPUT_DIR
-from os import remove
 from io import BytesIO
-from flask import flash, Flask, request, render_template, send_file, url_for, redirect
+from flask import flash, Flask, request, render_template, send_file, url_for, redirect, send_from_directory
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_wtf import FlaskForm
 from flask_bootstrap import Bootstrap
@@ -32,6 +32,7 @@ app.config.from_object(config[config_name])
 
 bootstrap = Bootstrap(app)
 
+logo = './static/resources/MatOLab-Logo.svg'
 
 SWAGGER_URL = "/api/docs"
 API_URL = "/static/swagger.json"
@@ -47,55 +48,73 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 class ExcelForm(FlaskForm):
     data_url = StringField("Excel to csv", validators=[DataRequired(), URL()], description='Paste URL to a excel file containing data-sheets')
 
+
 class PdfForm(FlaskForm):
-    data_url = StringField("Pdf to csv", validators=[DataRequired(), URL()], description='Paste URL to a text based pdf file containing tables')
-    settings = StringField("Settings", validators=[DataRequired(), URL()], description='Paste URL to a json settings file, matching the pdf')
+    data_url = StringField("URL to pdf file", validators=[DataRequired(), URL()], description='Paste URL to a text based pdf file containing tables')
+    settings = StringField("URL to .json settings file", validators=[DataRequired(), URL()], description='Paste URL to a settings .json file')
     submit = SubmitField("Start Conversion")
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    logo = './static/resources/MatOLab-Logo.svg'
-    start_form = ExcelForm()
-    pdf_form = PdfForm()
-    return render_template("index.html", logo=logo, start_form=start_form, pdf_form=pdf_form)
+    return render_template("index.html", logo=logo)
 
 @app.route("/excalibur", methods=["GET", "POST"])
 def excalibur():
     flash("redirect to excalibur webapp", "info")
     return redirect(url_for("index"))
 
+@app.route("/send_converted_files", methods=["GET", "POST"])
+def send_converted_files():
+    """
+    This method should only be called after conversion f a pdf file to respective csvs.
+
+
+    :return: sends the contents of TMP_OUT to the user.
+    """
+
+    # collect the csvs into a .zip file, then send the zipfile to the user
+    memory_file = BytesIO()
+    with zipfile.ZipFile(memory_file, 'w') as zf:
+        for dirname, subdirs, files in os.walk(OUTPUT_DIR):
+            zf.write(dirname)
+            for filename in files:
+                zf.write(os.path.join(dirname, filename))
+    memory_file.seek(0)
+
+    # delete local temporary files
+    for dirname, subdirs, files in os.walk(OUTPUT_DIR):
+        for file in files:
+            os.remove(os.path.join(dirname, file))
+
+    return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
+
 @app.route("/api/pdf_to_csv", methods=["GET", "POST"])
 def pdf_to_csv():
-    if request.method == 'POST':
-        url = request.form.get("data_url")
-        settings = request.form.get("settings")
+    pdf_form = PdfForm()
 
-        if not url.endswith('.pdf'):
-            flash("cannot convert file with given extension!", "info")
-            return redirect(url_for("index"))
+    if pdf_form.validate_on_submit() and request.method == 'POST':
 
-        if not settings.endswith('.json'):
-            flash("settings file was not given as .json file!", "info")
-            return redirect(url_for("index"))
+        url = pdf_form.data_url.data
+        settings = pdf_form.settings.data
+
+        if not url.endswith('.pdf') or not settings.endswith(".json"):
+            flash("given urls resolve to files with wrong filetype!", "info")
+            return render_template("pdf2csv.html", pdf_form=pdf_form)
 
         start = timer()
+
         # we need to access the raw file from github, without html code
         if "github.com" in url:
             url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
-
         if "github.com" in settings:
             settings = settings.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
 
         pdf_filename = secure_filename(url.rsplit("/", maxsplit=1)[1])
         settings_filename = secure_filename(settings.rsplit("/", maxsplit=1)[1])
-
 
         # write the files to local directory, the files are deleted again after conversion
         response = requests.get(url)
@@ -116,48 +135,41 @@ def pdf_to_csv():
             bounding_box = convert_pixel_to_point(table_areas, image_size)
             accuracy_dict = extract_tables(pdf_filename, settings_filename, page, bounding_box, table_count, False)
 
-            for k,v in accuracy_dict.items():
+            for k, v in accuracy_dict.items():
                 if v <= ACCURACY_THRESHOLD:
                     flash(f"parsing {k} was unsuccessful with an accuracy of {v}%", "warning")
                     accuracy_list.append(v)
 
             table_count += 1
 
-        # collect the csvs into a .zip file, then send the zipfile to the user
-        memory_file = BytesIO()
-        with zipfile.ZipFile(memory_file, 'w') as zf:
-            for dirname, subdirs, files in os.walk(OUTPUT_DIR):
-                zf.write(dirname)
-                for filename in files:
-                    zf.write(os.path.join(dirname, filename))
-        memory_file.seek(0)
-
         # we're done with conversion, delete the local file.
-        remove(pdf_filename)
-        remove(settings_filename)
-
-        # remove all csvs in TMP_OUT
-        for dirname, subdirs, files in os.walk(OUTPUT_DIR):
-            for file in files:
-                os.remove(os.path.join(dirname, file))
+        os.remove(pdf_filename)
+        os.remove(settings_filename)
 
         # TODO: get accuracy, time out of conversion and flask message
         end = timer()
         mean_accuracy = np.mean(np.array(accuracy_list))
-        time_seconds = end - start  #  millis
-        flash(f"completed conversion of {filename} in {time_seconds} seconds, \nwith a mean accuracy of {mean_accuracy}%", "info")
-        return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
+        time_seconds = end - start
 
-    return redirect(url_for("index"))
+        flash(
+            f"completed conversion of {pdf_filename} in {time_seconds} seconds, \nwith a mean accuracy of {mean_accuracy}%",
+            "info")
+
+        return render_template("pdf2csv.html", pdf_form=pdf_form, send_file=True)
+
+    return render_template("pdf2csv.html", pdf_form=pdf_form)
 
 
 @app.route("/api/xls_to_csv", methods=["GET", "POST"])
 def xls_to_csv():
-    if request.method == 'POST':
 
-        url = request.form.get("data_url")
+    excel_form = ExcelForm()
+
+    if excel_form.validate_on_submit() and request.method == 'POST':
+
+        url = excel_form.data_url.data
         
-        if not allowed_file(url):
+        if not url.endswith('.xls') and not url.endswith('.xlsx'):
             flash("cannot convert file with given extension!")
             return redirect(url_for("index"))
         
@@ -204,8 +216,8 @@ def xls_to_csv():
 
         # we're done with conversion, delete the local file.
         excel_file.close()
-        remove(filename)
+        os.remove(filename)
 
         return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
 
-    return redirect(url_for("index"))
+    return render_template("xls2csv.html", excel_form=excel_form)
