@@ -76,6 +76,14 @@ def send_converted_files():
     :return: sends the contents of TMP_OUT to the user.
     """
 
+    # check if we have already sent the csvs, in which case, we have already deleted them...
+    if os.path.isdir(OUTPUT_DIR):
+        if not os.listdir(OUTPUT_DIR):
+
+            # the output directory is empty, we have already sent and deleted the csvs
+            return redirect(url_for("pdf_to_csv"))
+
+
     # collect the csvs into a .zip file, then send the zipfile to the user
     memory_file = BytesIO()
     with zipfile.ZipFile(memory_file, 'w') as zf:
