@@ -6,9 +6,8 @@ import zipfile
 from timeit import default_timer as timer
 
 import requests
-from pdf import coordinates_copy
-from pdf.converter_pdf import *
-from pdf.converter_pdf import OUTPUT_DIR
+from Converter_Camelot import *
+from Converter_Camelot import OUTPUT_DIR
 from io import BytesIO
 from flask import flash, Flask, request, render_template, send_file, url_for, redirect, send_from_directory
 from flask_swagger_ui import get_swaggerui_blueprint
@@ -148,7 +147,7 @@ def pdf_to_csv():
         output.close()
 
         # TODO: incorporate into converter_pdf
-        tables = coordinates_copy.main(pdf_filename)
+        tables = Converter_Camelot.main(pdf_filename)
         accuracy_list = []
         table_count = 0
         for page, table_areas, image_size in tables:
