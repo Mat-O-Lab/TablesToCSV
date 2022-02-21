@@ -64,6 +64,45 @@
                    {{ pdf_form.data_url(class='form-control form-control-lg') }}
                 {% endif %}
         </div>
+
+        <div class="form-group mb-3" >
+            {{ pdf_form.detect_small_lines.label(class='form-control-label') }}
+                {% if pdf_form.detect_small_lines.errors %}
+                  {{ pdf_form.detect_small_lines(class='form-control form-control-lg is-invalid') }}
+                    <div class="invalid-feedback">
+                        {% for error in pdf_form.detect_small_lines.errors %}
+                          <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                   {{ pdf_form.detect_small_lines(class='form-control form-control-lg') }}
+                {% endif %}
+        </div>
+
+        <div class="form-group mb-3" >
+            {{ pdf_form.cut_text.label(class='form-control-label') }}
+            {{ pdf_form.cut_text(class='form-check') }}
+        </div>
+
+        <div class="form-group mb-3" >
+            {{ pdf_form.detect_superscripts.label(class='form-control-label') }}
+            {{ pdf_form.detect_superscripts(class='form-check') }}
+        </div>
+
+        <div class="form-group mb-3" >
+            {{ pdf_form.acc_threshold.label(class='form-control-label') }}
+                {% if pdf_form.acc_threshold.errors %}
+                  {{ pdf_form.acc_threshold(class='form-control form-control-lg is-invalid') }}
+                    <div class="invalid-feedback">
+                        {% for error in pdf_form.acc_threshold.errors %}
+                          <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                   {{ pdf_form.acc_threshold(class='form-control form-control-lg') }}
+                {% endif %}
+        </div>
+
         <div class="form-group mb-3" >
             {{ pdf_form.settings.label(class='form-control-label') }}
                 {% if pdf_form.settings.errors %}

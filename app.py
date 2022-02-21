@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import os
 import zipfile
-import base64
 from timeit import default_timer as timer
 
 import requests
@@ -15,9 +14,9 @@ from flask import flash, Flask, request, render_template, send_file, url_for, re
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_wtf import FlaskForm
 from flask_bootstrap import Bootstrap
-from wtforms import StringField, SubmitField
+from wtforms import StringField, SubmitField, DecimalField, BooleanField
 
-from wtforms.validators import DataRequired, URL
+from wtforms.validators import DataRequired, URL, NumberRange
 
 
 from werkzeug.utils import secure_filename
@@ -55,6 +54,10 @@ class ExcelForm(FlaskForm):
 class PdfForm(FlaskForm):
     data_url = StringField("URL to pdf file", validators=[DataRequired(), URL()], description='Paste URL to a text based pdf file containing tables')
     settings = StringField("URL to .json settings file", validators=[DataRequired(), URL()], description='Paste URL to a settings .json file')
+    detect_small_lines = DecimalField("Detect small lines", validators=[DataRequired(), NumberRange(min=15, max=100, message="please input numbers in range 15-100")])
+    cut_text = BooleanField("Cut text", default=False, description="cut text along column separators")
+    detect_superscripts = BooleanField("Detect Superscripts", default=False, description="detect super and subscripts")
+    acc_threshold = DecimalField("Parse accuracy threshold", default=80, validators=[NumberRange(min=0, max=100, message="please input a number in range 0-100")])
     submit = SubmitField("Start Conversion")
 
 
@@ -65,7 +68,7 @@ def index():
 @app.route("/excalibur", methods=["GET", "POST"])
 def excalibur():
     flash("redirect to excalibur webapp", "info")
-    return redirect(url_for("index"))
+    return redirect("https://pypi.org/project/excalibur-py/")
 
 @app.route("/send_converted_files", methods=["GET", "POST"])
 def send_converted_files():
@@ -108,6 +111,15 @@ def pdf_to_csv():
 
         url = pdf_form.data_url.data
         settings = pdf_form.settings.data
+
+        settings_dict = {
+
+            "cut text" : pdf_form.cut_text.data,
+            "detect superscripts" : pdf_form.detect_superscripts.data,
+            "detect small lines" : pdf_form.detect_small_lines.data,
+            "parse accuracy threshold" : pdf_form.acc_threshold.data
+        }
+
 
         if not url.endswith('.pdf') or not settings.endswith(".json"):
             flash("given urls resolve to files with wrong filetype!", "info")
