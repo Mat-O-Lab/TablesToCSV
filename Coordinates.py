@@ -17,11 +17,11 @@ class LocateTables:
 
         # quality: PDFtoImage, higher values can lead to a better recognition and a worse performance
         self.dpi = 100
-        # higher dpi - higher value (200dpi -> 50)
-        self.kernel_div = 30
+        # higher dpi - higher value
+        self.kernel_div = 35
         # a table with very large cells might not be recognized if this value is too small
         # a graph might be recognized as a table if this value is too large
-        self.max_size_cell_in_table = 10000 
+        self.max_size_cell_in_table = 14000
 
     def converter(self, img):
         """
@@ -43,8 +43,8 @@ class LocateTables:
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
 
         #Use vertical kernel to detect the vertical lines in a jpg
-        image_1 = cv2.erode(img_bin, ver_kernel, iterations=3)
-        vertical_lines = cv2.dilate(image_1, ver_kernel, iterations=3)
+        image_1 = cv2.erode(img_bin, ver_kernel, iterations=1)
+        vertical_lines = cv2.dilate(image_1, ver_kernel, iterations=1)
         #Use horizontal kernel to detect the horizontal lines in a jpg
         image_2 = cv2.erode(img_bin, hor_kernel, iterations=3)
         horizontal_lines = cv2.dilate(image_2, hor_kernel, iterations=3)
@@ -52,7 +52,7 @@ class LocateTables:
         # Combine horizontal and vertical lines in a new third image, with both having same weight.
         img_vh = cv2.addWeighted(vertical_lines, 0.5, horizontal_lines, 0.5, 0.0)
         #Eroding and thesholding the image
-        img_vh = cv2.erode(~img_vh, kernel, iterations=2)
+        img_vh = cv2.erode(~img_vh, kernel, iterations=1)
         thresh, img_vh = cv2.threshold(img_vh,128,255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 
         return img_vh,vertical_lines,horizontal_lines
@@ -156,7 +156,7 @@ class LocateTables:
         old_coordinates = self.coordinates[self.iteration]
         if borderless_image != []:
             # finding structures in image
-            cropped_images = self.imageCrop(borderless_image, -1)
+            cropped_images = self.imageCrop(borderless_image, self.iteration+1)
             if len(cropped_images) == 0:
                 table_is_valid = False
                 borderless_image = []
@@ -168,25 +168,25 @@ class LocateTables:
                 # finding out if a structure is in a box
                 if (w_new*h_new)/(w_old*h_old) < 0.9:
                     table_is_valid = False
-                    return table_is_valid, borderless_image
+                    return table_is_valid, cropped_images
                 self.coordinates[self.iteration] = old_coordinates
                 borderless_image = []
             # several structures in it -> found a box around content of a PDF
             else:
                 table_is_valid = False
-                return table_is_valid, borderless_image
+                return table_is_valid, cropped_images
 
         horizontal_spikes, spike_values_horizontal = self.tableSeperator(vertical_lines, True)
         vertical_spikes, spike_values_vertical = self.tableSeperator(horizontal_lines, False)
 
         w, h = image.size
         # maximal value that spikes can reach, 255 * w , 255 * h
-        # if the line goes through 90% or more percent of the image and if it's not a border of the image it's a valid spike
+        # if the line goes through 50% or more percent of the image and if it's not a border of the image it's a valid spike
         valid_spikes_vertical = vertical_spikes.copy()
         valid_spikes_horizontal = horizontal_spikes.copy()
 
-        minimum_line_width = 255*w*0.9
-        minimum_line_height = 255*h*0.9
+        minimum_line_width = 255*w*0.5
+        minimum_line_height = 255*h*0.5
         for (start, end), i in zip(vertical_spikes, range(len(vertical_spikes))):
             if start == 0 or end == h-1:
                 valid_spikes_vertical.remove((start,end))
@@ -203,8 +203,7 @@ class LocateTables:
         # calculate how many cells are contained in the structure
         cells = (len(valid_spikes_vertical)+1)*(len(valid_spikes_horizontal)+1)
         table_size = w*h
-        # print(cells, self.max_size_cell_in_table/cells, self.max_size_cell_in_table)
-        
+
         # if the average size of a cell is too large or if it doen't contain vertical or horizontal lines it is not a table
         if (table_size/cells)>self.max_size_cell_in_table or len(valid_spikes_vertical) == 0 or len(valid_spikes_horizontal) == 0:
             table_is_valid = False
@@ -229,7 +228,7 @@ class LocateTables:
 
             w,h =  page.size
             # detecting tables
-            self.detectTable([img_vh, -1])
+            self.detectTable([img_vh, -1], False)
             for valid in self.validated_tables:
                 tables.append([i+1, valid[1],[w,h]])
 
@@ -325,15 +324,18 @@ class LocateTables:
 
         return image
 
-    def detectTable(self, img_vh):
+    def detectTable(self, img_vh, crop):
         """
         detecting tables in a image
 
         img_vh = (image, self.iteration)
         """
-        cropped_images = self.imageCrop(img_vh[0], img_vh[1]) # first iteration (img, -1)
+        if crop:
+            cropped_images=img_vh
+        else:
+            cropped_images = self.imageCrop(img_vh[0], img_vh[1]) # first iteration (img, -1)
         for image, border, iter in cropped_images:
-            # if a iamgecrop gets processed for the first time iter contains a -1
+            # if a imagecrop gets processed for the first time iter contains a -1
             # otherwise coordinates already exist for that crop
             if iter == -1:
                 self.coordinates.append(border)
@@ -345,17 +347,16 @@ class LocateTables:
                 # calculating and appending new border
                 border = (x1+x1_old,y1+y1_old,x2+x1_old,y2+y1_old)
                 self.coordinates.append(border)
-
+        
             # validate if the found structure is a table
-            validation, new_image = self.validate_table(image)
+            validation, cropped = self.validate_table(image)
             
             # recursion call to process structures in the image
-            if validation == False and new_image != []:
+            if validation == False and cropped != []:
                 self.iteration += 1
-                image = [new_image, self.iteration]
-                self.detectTable(image)
+                self.detectTable(cropped, True)
             # no table were found
-            elif validation == False and new_image==[]:
+            elif validation == False and cropped==[]:
                 continue
             # structure is a valid table
             else:
