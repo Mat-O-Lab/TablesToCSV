@@ -12,7 +12,7 @@ flag_size -> changeable by user (super-/sub-scripts will be marked with <s> and 
 OUTPUT_DIR = "TMP_OUT"
 INPUT_DIR = "TMP_PDF"
 
-def extract_tables(path, p, tab_ar, table_count, parse_report, line_size_scaling, split_text, flag_size):
+def extract_tables(path, p, tab_ar, table_count, parse_report, line_size_scaling, split_text, flag_size, accuracy_threshold):
     """
     extracting tables out of PDF files with Camelot
     """
@@ -28,18 +28,25 @@ def extract_tables(path, p, tab_ar, table_count, parse_report, line_size_scaling
         table_areas=tab_ar,
         pages=str(p),
     )
+    if len(tables) == 0:
+        filename = path + "_page_" + str(p) + "_table_" + str(table_count)
+        parse_report.append((filename, "Camelot did not recognize a table"))
+
     for table, i in zip(tables, range(len(tables))):
         filename = path + "_page_" + str(p) + "_table_" + str(table_count)
         # generate path to output file
         path_output = OUTPUT_DIR+"/" + filename + ".csv"
         # save parsing report
-        parse_report.append((filename+"_table_"+str(table_count), tables[i].parsing_report))
+        report = tables[i].parsing_report
+        if report["accuracy"] <= accuracy_threshold:
+            parse_report.append((filename, "There may be a problem with this table"))
         # replace , -> .
         tables[i].df.replace(to_replace=',', value='.', inplace=True, regex=True)
         # replace new lines with one whitespace
         tables[i].df.replace(to_replace='\n', value=' ', inplace=True, regex=True)
         # export csv
         tables[i].to_csv(path_output)
+    return
 
 def convert_pixel_to_point(table_areas, image_size, dpi):
     """
@@ -71,9 +78,10 @@ def convert_pixel_to_point(table_areas, image_size, dpi):
     return bounding_box
 
 def main(pdf_name, settings):
-    line_size_scaling = settings["line_size_scaling"]
-    split_text = settings["split_text"]
-    flag_size = settings["flag_size"]
+    line_size_scaling = settings["detect small lines"]
+    split_text = settings["cut text"]
+    flag_size = settings["detect superscripts"]
+    accuracy_threshold = settings["parse accuracy threshold"]
     # contains accuracy of table extraction
     parse_report = []
     # modify path to be able to work with it
@@ -84,7 +92,7 @@ def main(pdf_name, settings):
         coord = Coordinates.LocateTables()
         tables, dpi = coord.main(pdf_name, INPUT_DIR)
     except:
-        parse_report.append((pdf_name, "An error occured while trying to extract the PDF"))
+        parse_report.append((pdf_name, "An error occured: LocateTables"))
         return False, parse_report
 
     table_count = 1
@@ -98,7 +106,11 @@ def main(pdf_name, settings):
         # converting pixel to PDF_points
         bounding_box = convert_pixel_to_point(table_areas, image_size, dpi)
         # extracting tables with camelot
-        extract_tables(pdf_name, page, bounding_box, table_count, parse_report, line_size_scaling, split_text, flag_size)
+        try:
+            extract_tables(pdf_name, page, bounding_box, table_count, parse_report, line_size_scaling, split_text, flag_size, accuracy_threshold)
+        except:
+            parse_report.append((pdf_name, "An error occured: Camelot"))
+            return False, parse_report
         table_count += 1
     if parse_report == []:
         parse_report.append((pdf_name, "No tables were found"))
