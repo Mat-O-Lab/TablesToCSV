@@ -85,7 +85,7 @@ def main(pdf_name, settings):
         tables, dpi = coord.main(pdf_name, INPUT_DIR)
     except:
         parse_report.append((pdf_name, "An error occured while trying to extract the PDF"))
-        return parse_report
+        return False, parse_report
 
     table_count = 1
     new_page = 1
@@ -102,4 +102,5 @@ def main(pdf_name, settings):
         table_count += 1
     if parse_report == []:
         parse_report.append((pdf_name, "No tables were found"))
-    return parse_report
+        return False, parse_report
+    return True, parse_report

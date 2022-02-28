@@ -5,6 +5,7 @@ import os
 import zipfile
 from timeit import default_timer as timer
 
+import json
 import requests
 import Converter_Camelot
 from Converter_Camelot import *
@@ -135,6 +136,7 @@ def pdf_to_csv(manual):
 
     if pdf_form.validate_on_submit() and request.method == 'POST':
 
+        start = timer()
         url = pdf_form.data_url.data
 
         if "github.com" in url:
@@ -142,7 +144,6 @@ def pdf_to_csv(manual):
 
         if manual:
             settings_dict = {
-
                 "cut text": pdf_form.cut_text.data,
                 "detect superscripts": pdf_form.detect_superscripts.data,
                 "detect small lines": pdf_form.detect_small_lines.data,
@@ -156,56 +157,30 @@ def pdf_to_csv(manual):
                 flash("given urls resolve to files with wrong filetype!", "info")
                 return render_template("pdf2csv.html", pdf_form=pdf_form, manual=manual)
 
-        start = timer()
+                # we need to access the raw file from github, without html code
 
-        # we need to access the raw file from github, without html code
+            if "github.com" in settings:
+                settings = settings.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
 
-        if "github.com" in settings:
-            settings = settings.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+            response = requests.get(settings)
+
+            settings_dict = json.load(BytesIO(response.content))
 
         pdf_filename = secure_filename(url.rsplit("/", maxsplit=1)[1])
-        settings_filename = secure_filename(settings.rsplit("/", maxsplit=1)[1])
 
         # write the files to local directory, the files are deleted again after conversion
         response = requests.get(url)
-        output = open(pdf_filename, 'wb')
+        output = open(os.path.join("TMP_PDF", pdf_filename), 'wb')
         output.write(response.content)
         output.close()
 
-        response = requests.get(settings)
-        output = open(settings_filename, 'wb')
-        output.write(response.content)
-        output.close()
+        success, parse_report = Converter_Camelot.main(pdf_filename, settings_dict)
 
-        # TODO: incorporate into converter_pdf
-        tables = Converter_Camelot.main(pdf_filename)
-        accuracy_list = []
-        table_count = 0
-        for page, table_areas, image_size in tables:
-            bounding_box = convert_pixel_to_point(table_areas, image_size)
-            accuracy_dict = extract_tables(pdf_filename, settings_filename, page, bounding_box, table_count, False)
+        for (key, value) in parse_report:
+            flash(f"{key} {value}", "info")
 
-            for k, v in accuracy_dict.items():
-                if v <= ACCURACY_THRESHOLD:
-                    flash(f"parsing {k} was unsuccessful with an accuracy of {v}%", "warning")
-                    accuracy_list.append(v)
-
-            table_count += 1
-
-        # we're done with conversion, delete the local file.
-        os.remove(pdf_filename)
-        os.remove(settings_filename)
-
-        # TODO: get accuracy, time out of conversion and flask message
         end = timer()
-        mean_accuracy = np.mean(np.array(accuracy_list))
-        time_seconds = end - start
-
-        flash(
-            f"completed conversion of {pdf_filename} in {time_seconds} seconds, \nwith a mean accuracy of {mean_accuracy}%",
-            "info")
-
-        return render_template("pdf2csv.html", pdf_form=pdf_form, send_file=True, manual=manual)
+        return render_template("pdf2csv.html", pdf_form=pdf_form, send_file=success, manual=manual)
 
     return render_template("pdf2csv.html", pdf_form=pdf_form, manual=manual)
 
