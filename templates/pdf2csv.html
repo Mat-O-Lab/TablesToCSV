@@ -51,6 +51,7 @@
         {{ pdf_form.hidden_tag() }}
         <div class="form-group mb-3" >
             {{ pdf_form.data_url.label(class='form-control-label') }}
+
                 {% if pdf_form.data_url.errors %}
                   {{ pdf_form.data_url(class='form-control form-control-lg is-invalid') }}
                     <div class="invalid-feedback">
@@ -61,7 +62,9 @@
                 {% else %}
                    {{ pdf_form.data_url(class='form-control form-control-lg') }}
                 {% endif %}
+            <div class="form-text">{{ pdf_form.data_url.description }}</div>
         </div>
+
         {% if manual %}
             <div class="form-group mb-3" >
                 {{ pdf_form.detect_small_lines.label(class='form-control-label') }}
@@ -75,16 +78,19 @@
                     {% else %}
                        {{ pdf_form.detect_small_lines(class='form-control form-control-lg') }}
                     {% endif %}
+                <div class="form-text">{{ pdf_form.detect_small_lines.description }}</div>
             </div>
 
             <div class="form-group mb-3" >
                 {{ pdf_form.cut_text.label(class='form-control-label') }}
                 {{ pdf_form.cut_text(class='form-check') }}
+                <div class="form-text">{{ pdf_form.cut_text.description }}</div>
             </div>
 
             <div class="form-group mb-3" >
                 {{ pdf_form.detect_superscripts.label(class='form-control-label') }}
                 {{ pdf_form.detect_superscripts(class='form-check') }}
+                <div class="form-text">{{ pdf_form.detect_superscripts.description }}</div>
             </div>
         {% else %}
             <div class="form-group mb-3" >
@@ -99,6 +105,8 @@
                     {% else %}
                        {{ pdf_form.settings(class='form-control form-control-lg') }}
                     {% endif %}
+                    <div class="form-text">{{ pdf_form.settings.description }}</div>
+
             </div>
         {% endif %}
 
@@ -114,6 +122,7 @@
                 {% else %}
                    {{ pdf_form.acc_threshold(class='form-control form-control-lg') }}
                 {% endif %}
+            <div class="form-text">{{ pdf_form.acc_threshold.description }}</div>
         </div>
 
 
