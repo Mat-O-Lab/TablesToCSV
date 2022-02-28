@@ -46,12 +46,22 @@ python wsgi.py
     
 # HOW TO USE THE APP
 
-The webapp can convert excel files into a zip folder of csv files. All excel sheets within a given excel file
-are converted to csv files (sheets only containing plots are omitted). <br>
+1) The webapp can convert pdf and excel files into a zip folder of csv files. To begin, choose whether to convert pdfs or excel files, by clicking the button.
 
-To start the conversion, paste the URL of your web-resource into the url-field of the webapp and hit the "Start Conversion" button.
+![choose_conversion](https://user-images.githubusercontent.com/72997461/155974816-b8325d29-dde1-4dfa-a25b-91fd4c7f973a.png)
 
-![app_example](https://user-images.githubusercontent.com/72997461/149933370-e6d17ac1-72f6-40d6-bf41-f061eaddd928.png)
-
-Please note that, at the current state, only web-resources are allowed for conversion, pasting the path of a local excel file
+2) Paste your URLs to the respective fields. Please note that, at the current state, only web-resources are allowed for conversion, pasting the path of a local file
 into the url-field will lead to an error message. In this case, simply hit the "back-page" key and try with a different resource.
+
+![pdf_conversion_example](https://user-images.githubusercontent.com/72997461/155974753-6aa44fe1-b4a1-4b63-b982-b1e83b88f3a1.png)
+
+2.1) Alternatively, you can use the "toggle manual" button at the bottom of the page to parse the pdf file without a .json settings file. In this case you will have to provide
+additional information required to parse the pdf.
+
+3) When you have filled in all required information, you can proceed, by clicking the "Start Conversion" button. (The parsing may take a few seconds)
+
+![start_conversion](https://user-images.githubusercontent.com/72997461/155975760-d059d2ef-0fad-40e4-8cf5-2fc6b2871a7a.png)
+
+4) You will receive parsing information in case tables in your pdf file couldn't meet the given parsing accuracy threshold. Finally, a "Download" button should
+appear. Hit the button to download the zipped csvs.
+
