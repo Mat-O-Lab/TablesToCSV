@@ -40,7 +40,6 @@
         </div>
     </div>
 {% endwith %}
-
 <main class="bg-light rounded-3 px-3">
    <div class="container-fluid mb-3">
       <h1 class="display-5 fw-bold">PDFtoCSV</h1>
@@ -48,8 +47,7 @@
           Tool for mapping pdf data sheets to csv files.
       </p>
 
-
-      <form class='pb-3' method="post" action="{{ url_for('pdf_to_csv') }}">
+      <form class='pb-3' method="post" action="{{ url_for('pdf_to_csv', manual=manual) }}">
         {{ pdf_form.hidden_tag() }}
         <div class="form-group mb-3" >
             {{ pdf_form.data_url.label(class='form-control-label') }}
@@ -64,32 +62,47 @@
                    {{ pdf_form.data_url(class='form-control form-control-lg') }}
                 {% endif %}
         </div>
+        {% if manual %}
+            <div class="form-group mb-3" >
+                {{ pdf_form.detect_small_lines.label(class='form-control-label') }}
+                    {% if pdf_form.detect_small_lines.errors %}
+                      {{ pdf_form.detect_small_lines(class='form-control form-control-lg is-invalid') }}
+                        <div class="invalid-feedback">
+                            {% for error in pdf_form.detect_small_lines.errors %}
+                              <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                       {{ pdf_form.detect_small_lines(class='form-control form-control-lg') }}
+                    {% endif %}
+            </div>
 
-        <div class="form-group mb-3" >
-            {{ pdf_form.detect_small_lines.label(class='form-control-label') }}
-                {% if pdf_form.detect_small_lines.errors %}
-                  {{ pdf_form.detect_small_lines(class='form-control form-control-lg is-invalid') }}
-                    <div class="invalid-feedback">
-                        {% for error in pdf_form.detect_small_lines.errors %}
-                          <span>{{ error }}</span>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                   {{ pdf_form.detect_small_lines(class='form-control form-control-lg') }}
-                {% endif %}
-        </div>
+            <div class="form-group mb-3" >
+                {{ pdf_form.cut_text.label(class='form-control-label') }}
+                {{ pdf_form.cut_text(class='form-check') }}
+            </div>
 
-        <div class="form-group mb-3" >
-            {{ pdf_form.cut_text.label(class='form-control-label') }}
-            {{ pdf_form.cut_text(class='form-check') }}
-        </div>
+            <div class="form-group mb-3" >
+                {{ pdf_form.detect_superscripts.label(class='form-control-label') }}
+                {{ pdf_form.detect_superscripts(class='form-check') }}
+            </div>
+        {% else %}
+            <div class="form-group mb-3" >
+                {{ pdf_form.settings.label(class='form-control-label') }}
+                    {% if pdf_form.settings.errors %}
+                      {{ pdf_form.settings(class='form-control form-control-lg is-invalid') }}
+                        <div class="invalid-feedback">
+                            {% for error in pdf_form.settings.errors %}
+                              <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                       {{ pdf_form.settings(class='form-control form-control-lg') }}
+                    {% endif %}
+            </div>
+        {% endif %}
 
-        <div class="form-group mb-3" >
-            {{ pdf_form.detect_superscripts.label(class='form-control-label') }}
-            {{ pdf_form.detect_superscripts(class='form-check') }}
-        </div>
-
-        <div class="form-group mb-3" >
+      <div class="form-group mb-3" >
             {{ pdf_form.acc_threshold.label(class='form-control-label') }}
                 {% if pdf_form.acc_threshold.errors %}
                   {{ pdf_form.acc_threshold(class='form-control form-control-lg is-invalid') }}
@@ -103,27 +116,24 @@
                 {% endif %}
         </div>
 
-        <div class="form-group mb-3" >
-            {{ pdf_form.settings.label(class='form-control-label') }}
-                {% if pdf_form.settings.errors %}
-                  {{ pdf_form.settings(class='form-control form-control-lg is-invalid') }}
-                    <div class="invalid-feedback">
-                        {% for error in pdf_form.settings.errors %}
-                          <span>{{ error }}</span>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                   {{ pdf_form.settings(class='form-control form-control-lg') }}
-                {% endif %}
-        </div>
-
 
         <button class="form-group btn btn-primary btn-lg" type="submit" >{{ pdf_form.submit.label }}</button>
 
     </form>
-    <form method="post" action="{{ url_for('excalibur') }}">
-        <button class="form-group btn btn-outline-success btn-lg" type="submit" >Create new settings.json file</button>
+    <form class='pb-3' method="post" action="{{ url_for('excalibur') }}">
+        <button class="form-group btn btn-primary btn-lg" type="submit" >Create new settings.json file</button>
     </form>
+
+   {% if manual %}
+    <form class='pb-3' method="post" action="{{ url_for('toggle_automatic') }}">
+        <button class="form-group btn btn-primary btn-lg" type="submit" >toggle to automatic parsing</button>
+    </form>
+   {% else %}
+   <form class='pb-3' method="post" action="{{ url_for('toggle_manual') }}">
+        <button class="form-group btn btn-primary btn-lg" type="submit" >toggle to manual parsing</button>
+    </form>
+   {% endif %}
+
     {% if send_file %}
         <a class="form-group btn btn-primary btn-lg my-3" href="{{ url_for("send_converted_files") }}">Download</a>
     {% endif %}

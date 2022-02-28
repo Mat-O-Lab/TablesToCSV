@@ -6,6 +6,7 @@ import zipfile
 from timeit import default_timer as timer
 
 import requests
+import Converter_Camelot
 from Converter_Camelot import *
 from Converter_Camelot import OUTPUT_DIR
 from io import BytesIO
@@ -23,6 +24,7 @@ from config import config
 
 ALLOWED_EXTENSIONS = {'xls', 'xlsx', 'pdf'}
 ACCURACY_THRESHOLD = 95 # percent
+TOGGLE = False
 config_name = os.environ.get("APP_MODE") or "development"
 
 app = Flask(__name__)
@@ -49,14 +51,28 @@ app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 class ExcelForm(FlaskForm):
     data_url = StringField("Excel to csv", validators=[DataRequired(), URL()], description='Paste URL to a excel file containing data-sheets')
 
+class PDF_automatic(FlaskForm):
+    data_url = StringField("URL to pdf file", validators=[DataRequired(), URL()],
+                           description='Paste URL to a text based pdf file containing tables')
+    settings = StringField("URL to .json settings file", validators=[DataRequired(), URL()],
+                           description='Paste URL to a settings .json file')
+    acc_threshold = DecimalField("Parse accuracy threshold", default=80, validators=[
+        NumberRange(min=0, max=100, message="please input a number in range 0-100")],
+                                 description="Parse results with an accuracy lower than the given threshold flash a warning message.")
+    submit = SubmitField("Start Conversion")
 
-class PdfForm(FlaskForm):
-    data_url = StringField("URL to pdf file", validators=[DataRequired(), URL()], description='Paste URL to a text based pdf file containing tables')
-    settings = StringField("URL to .json settings file", validators=[DataRequired(), URL()], description='Paste URL to a settings .json file')
-    detect_small_lines = DecimalField("Detect small lines", validators=[DataRequired(), NumberRange(min=15, max=100, message="please input numbers in range 15-100")])
+class PDF_manual(FlaskForm):
+    data_url = StringField("URL to pdf file", validators=[DataRequired(), URL()],
+                           description='Paste URL to a text based pdf file containing tables')
+    detect_small_lines = DecimalField("Detect small lines", validators=[DataRequired(), NumberRange(min=15, max=100,
+                                                                                                    message="please input numbers in range 15-100")],
+                                      description="Small lines can be detected by increasing this value: Range 15-100.")
     cut_text = BooleanField("Cut text", default=False, description="cut text along column separators")
-    detect_superscripts = BooleanField("Detect Superscripts", default=False, description="detect super and subscripts")
-    acc_threshold = DecimalField("Parse accuracy threshold", default=80, validators=[NumberRange(min=0, max=100, message="please input a number in range 0-100")])
+    detect_superscripts = BooleanField("Detect Superscripts", default=False,
+                                       description="detect super and subscripts in table headers")
+    acc_threshold = DecimalField("Parse accuracy threshold", default=80, validators=[
+        NumberRange(min=0, max=100, message="please input a number in range 0-100")],
+                                 description="Parse results with an accuracy lower than the given threshold flash a warning message.")
     submit = SubmitField("Start Conversion")
 
 
@@ -68,6 +84,14 @@ def index():
 def excalibur():
     flash("redirect to excalibur webapp", "info")
     return redirect("https://pypi.org/project/excalibur-py/")
+
+@app.route("/toggle_manual", methods=["GET", "POST"])
+def toggle_manual():
+    return redirect(url_for("pdf_to_csv", manual=True))
+
+@app.route("/toggle_automatic", methods=["GET", "POST"])
+def toggle_automatic():
+    return redirect(url_for("pdf_to_csv", manual=False))
 
 @app.route("/send_converted_files", methods=["GET", "POST"])
 def send_converted_files():
@@ -102,33 +126,40 @@ def send_converted_files():
 
     return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
 
-@app.route("/api/pdf_to_csv", methods=["GET", "POST"])
-def pdf_to_csv():
-    pdf_form = PdfForm()
+@app.route("/api/pdf_to_csv/<manual>", methods=["GET", "POST"])
+def pdf_to_csv(manual):
+    # we have to parse the boolean value of manual
+    manual = True if manual=="True" else False
+
+    pdf_form = PDF_manual() if manual else PDF_automatic()
 
     if pdf_form.validate_on_submit() and request.method == 'POST':
 
         url = pdf_form.data_url.data
-        settings = pdf_form.settings.data
 
-        settings_dict = {
+        if "github.com" in url:
+            url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
 
-            "cut text" : pdf_form.cut_text.data,
-            "detect superscripts" : pdf_form.detect_superscripts.data,
-            "detect small lines" : pdf_form.detect_small_lines.data,
-            "parse accuracy threshold" : pdf_form.acc_threshold.data
-        }
+        if manual:
+            settings_dict = {
 
+                "cut text": pdf_form.cut_text.data,
+                "detect superscripts": pdf_form.detect_superscripts.data,
+                "detect small lines": pdf_form.detect_small_lines.data,
+                "parse accuracy threshold": pdf_form.acc_threshold.data
+            }
+        else:
 
-        if not url.endswith('.pdf') or not settings.endswith(".json"):
-            flash("given urls resolve to files with wrong filetype!", "info")
-            return render_template("pdf2csv.html", pdf_form=pdf_form)
+            settings = pdf_form.settings.data
+
+            if not url.endswith('.pdf') or not settings.endswith(".json"):
+                flash("given urls resolve to files with wrong filetype!", "info")
+                return render_template("pdf2csv.html", pdf_form=pdf_form, manual=manual)
 
         start = timer()
 
         # we need to access the raw file from github, without html code
-        if "github.com" in url:
-            url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+
         if "github.com" in settings:
             settings = settings.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
 
@@ -174,9 +205,9 @@ def pdf_to_csv():
             f"completed conversion of {pdf_filename} in {time_seconds} seconds, \nwith a mean accuracy of {mean_accuracy}%",
             "info")
 
-        return render_template("pdf2csv.html", pdf_form=pdf_form, send_file=True)
+        return render_template("pdf2csv.html", pdf_form=pdf_form, send_file=True, manual=manual)
 
-    return render_template("pdf2csv.html", pdf_form=pdf_form)
+    return render_template("pdf2csv.html", pdf_form=pdf_form, manual=manual)
 
 
 @app.route("/api/xls_to_csv", methods=["GET", "POST"])

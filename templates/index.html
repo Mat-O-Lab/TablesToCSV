@@ -44,7 +44,7 @@
 <main class="bg-light rounded-3 px-3">
     <div class="container">
         <a class="form-group btn btn-outline-success btn-lg" href="{{ url_for('xls_to_csv') }}">Convert your Excel file into csvs!</a>
-        <a class="form-group btn btn-outline-success btn-lg" href="{{ url_for('pdf_to_csv') }}">Convert your PDF file into csvs!</a>
+        <a class="form-group btn btn-outline-success btn-lg" href="{{ url_for('pdf_to_csv', manual=false) }}">Convert your PDF file into csvs!</a>
     </div>
 </main>
 <footer class="pt-3 my-4 text-center text-muted border-top">
