@@ -29,7 +29,7 @@ def extract_tables(path, p, tab_ar, table_count, parse_report, line_size_scaling
     )
     if len(tables) == 0:
         filename = path + "_page_" + str(p)
-        parse_report.append((filename, "Camelot did not recognize a table"))
+        parse_report.append((filename, "Camelot may not have recognized a table"))
         found_table = False
 
     for table, i in zip(tables, range(len(tables))):
