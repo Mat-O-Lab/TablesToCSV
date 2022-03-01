@@ -65,3 +65,17 @@ additional information required to parse the pdf.
 4) You will receive parsing information in case tables in your pdf file couldn't meet the given parsing accuracy threshold. Finally, a "Download" button should
 appear. Hit the button to download the zipped csvs.
 
+# DOCKER
+Clone the repo with 
+```bash
+git clone https://github.com/Mat-O-Lab/TablesToCSV.git
+```
+cd into the cloned folder
+```bash
+cd TablesToCSV
+```
+Build and start the container.
+```bash
+docker-compose build
+docker-compose up
+```
