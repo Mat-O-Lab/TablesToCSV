@@ -9,7 +9,7 @@ import json
 import requests
 import Converter_Camelot
 from Converter_Camelot import *
-from Converter_Camelot import OUTPUT_DIR
+from Converter_Camelot import OUTPUT_DIR, INPUT_DIR
 from io import BytesIO
 from flask import flash, Flask, request, render_template, send_file, url_for, redirect, send_from_directory
 from flask_swagger_ui import get_swaggerui_blueprint
@@ -60,7 +60,7 @@ class PDF_automatic(FlaskForm):
     acc_threshold = DecimalField("Parse accuracy threshold", default=80, validators=[
         NumberRange(min=0, max=100, message="please input a number in range 0-100")],
                                  description="Parse results with an accuracy lower than the given threshold flash a warning message.")
-    submit = SubmitField("Start Conversion")
+    submit = SubmitField("Start conversion")
 
 class PDF_manual(FlaskForm):
     data_url = StringField("URL to pdf file", validators=[DataRequired(), URL()],
@@ -75,6 +75,18 @@ class PDF_manual(FlaskForm):
         NumberRange(min=0, max=100, message="please input a number in range 0-100")],
                                  description="Parse results with an accuracy lower than the given threshold flash a warning message.")
     submit = SubmitField("Start Conversion")
+
+
+def clean_tmp_files():
+
+    # delete local temporary files
+    for dirname, subdirs, files in os.walk(OUTPUT_DIR):
+        for file in files:
+            os.remove(os.path.join(dirname, file))
+
+    for dirname, subdirs, files in os.walk(INPUT_DIR):
+        for file in files:
+            os.remove(os.path.join(dirname, file))
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -98,17 +110,15 @@ def toggle_automatic():
 def send_converted_files():
     """
     This method should only be called after conversion f a pdf file to respective csvs.
-
-
     :return: sends the contents of TMP_OUT to the user.
     """
 
     # check if we have already sent the csvs, in which case, we have already deleted them...
     if os.path.isdir(OUTPUT_DIR):
         if not os.listdir(OUTPUT_DIR):
-
+            flash("App in faulty state, please reload the page and repeat your query.", "info")
             # the output directory is empty, we have already sent and deleted the csvs
-            return redirect(url_for("pdf_to_csv"))
+            return redirect(url_for("pdf_to_csv", manual=False))
 
 
     # collect the csvs into a .zip file, then send the zipfile to the user
@@ -120,12 +130,9 @@ def send_converted_files():
                 zf.write(os.path.join(dirname, filename))
     memory_file.seek(0)
 
-    # delete local temporary files
-    for dirname, subdirs, files in os.walk(OUTPUT_DIR):
-        for file in files:
-            os.remove(os.path.join(dirname, file))
-
     return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
+
+
 
 @app.route("/api/pdf_to_csv/<manual>", methods=["GET", "POST"])
 def pdf_to_csv(manual):
@@ -136,6 +143,9 @@ def pdf_to_csv(manual):
 
     if pdf_form.validate_on_submit() and request.method == 'POST':
 
+        # clean out output directory, in case we have old csvs there.
+        clean_tmp_files()
+
         start = timer()
         url = pdf_form.data_url.data
 
@@ -144,10 +154,10 @@ def pdf_to_csv(manual):
 
         if manual:
             settings_dict = {
-                "cut text": pdf_form.cut_text.data,
-                "detect superscripts": pdf_form.detect_superscripts.data,
-                "detect small lines": pdf_form.detect_small_lines.data,
-                "parse accuracy threshold": pdf_form.acc_threshold.data
+                "split_text": pdf_form.cut_text.data,
+                "flag_size": pdf_form.detect_superscripts.data,
+                "line_size_scaling": pdf_form.detect_small_lines.data,
+                "accuracy_threshold": pdf_form.acc_threshold.data
             }
         else:
 
@@ -165,6 +175,7 @@ def pdf_to_csv(manual):
             response = requests.get(settings)
 
             settings_dict = json.load(BytesIO(response.content))
+            settings_dict["accuracy_threshold"] = pdf_form.acc_threshold.data
 
         pdf_filename = secure_filename(url.rsplit("/", maxsplit=1)[1])
 

@@ -130,16 +130,16 @@
 
     </form>
     <form class='pb-3' method="post" action="{{ url_for('excalibur') }}">
-        <button class="form-group btn btn-primary btn-lg" type="submit" >Create new settings.json file</button>
+        <button class="form-group btn btn-primary btn-lg" type="submit" >Create settings file</button>
     </form>
 
    {% if manual %}
     <form class='pb-3' method="post" action="{{ url_for('toggle_automatic') }}">
-        <button class="form-group btn btn-primary btn-lg" type="submit" >toggle to automatic parsing</button>
+        <button class="form-group btn btn-primary btn-lg" type="submit" >Toggle to automatic parsing</button>
     </form>
    {% else %}
    <form class='pb-3' method="post" action="{{ url_for('toggle_manual') }}">
-        <button class="form-group btn btn-primary btn-lg" type="submit" >toggle to manual parsing</button>
+        <button class="form-group btn btn-primary btn-lg" type="submit" >Toggle to manual parsing</button>
     </form>
    {% endif %}
 

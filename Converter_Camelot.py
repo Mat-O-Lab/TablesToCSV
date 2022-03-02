@@ -79,10 +79,10 @@ def convert_pixel_to_point(table_areas, image_size, dpi):
     return bounding_box
 
 def main(pdf_name, settings):
-    line_size_scaling = settings["detect small lines"]
-    split_text = settings["cut text"]
-    flag_size = settings["detect superscripts"]
-    accuracy_threshold = settings["parse accuracy threshold"]
+    line_size_scaling = settings["line_size_scaling"]
+    split_text = settings["split_text"]
+    flag_size = settings["flag_size"]
+    accuracy_threshold = settings["accuracy_threshold"]
     # contains accuracy of table extraction
     parse_report = []
     # modify path to be able to work with it
