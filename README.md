@@ -1,6 +1,13 @@
 # TablesToCSV
 Aims to convert tables in pds or Excel Spreedsheets to a uniform CSV format
 
+# CONTENTS OF THIS README
+1) REQUIREMENTS: Things you need to get done, before you can use this webapp.
+2) HOW TO USE THE APP: Simple instructions on how to navigate and use the app.
+3) EXAMPLE INPUT/OUPUT: We give an example of a pdf file conversion into csvs
+4) DOCKER: How to start the app with Docker
+
+
 # REQUIREMENTS 
 
 Please note that this is a "quick and dirty" type of setup. For a clean setup, install all packages
@@ -64,6 +71,43 @@ additional information required to parse the pdf.
 
 4) You will receive parsing information in case tables in your pdf file couldn't meet the given parsing accuracy threshold. Finally, a "Download" button should
 appear. Hit the button to download the zipped csvs.
+
+# EXAMPLE INPUT/OUTPUT
+
+Here, we will give a brief example of an input with the corresponding output. We will be converting a pdf file
+to a number of csv files with the help of a json settings file. Alternatively, we could use the manual settings, in case
+we do not have a settings.json file at our disposal. (click on the links to view the files)
+
+1) An example of a pdf file can be seen under this url:
+https://github.com/Mat-O-Lab/TablesToCSV/blob/PDF-to-CSV/PDFtoCSV/PDFs/C85C_1.pdf
+
+2) An example of a settings file can be seen here:
+https://github.com/Mat-O-Lab/TablesToCSV/blob/PDF-to-CSV/PDFtoCSV/settings/C85C_1.json
+
+3) We provide these urls to the webapp and hit the "Start conversion" Button.
+![example](https://user-images.githubusercontent.com/72997461/156362496-86da985b-8bd4-4ae1-97d6-052ac01ffe7d.png)
+
+4) By hitting the "Download" Button, we can download a .zip file to our local machine.
+
+5) Use your zip-tool of choice (in case you dont have one: https://www.7-zip.de/) to extract the csvs. Open the unzipped folder.
+You should find a number of csv files inside. Use a text editor or excel to open the files.
+
+A resulting csv file should have the following form
+```text
+"","Datum","Uhrzeit","E<s>t</s>MPa","<s>M</s>MPa","<s>M</s>%","b  mm","h   mm","A<s>0</s>  mm²","Angaben zum Bruch"
+"Probe 1","17.09.2020","13:22:49","532.89","33.54","135.56","9.97","4.02","40.05","Bruch Mitte"
+"Probe 2","17.09.2020","13:44:11","517.66","33.04","135.75","9.97","4.02","40.08","Bruch Mitte"
+"Probe 3","17.09.2020","14:07:31","400.12","32.47","132.86","9.96","4.02","40.05","Bruch Mitte"
+"Probe 4","18.09.2020","08:38:29","480.07","33.46","143.23","9.99","4.01","40.08","Bruch Mitte"
+"Probe 5","18.09.2020","09:00:54","344.63","34.82","147.06","9.99","4.02","40.18","Bruch Mitte"
+"Probe 6","18.09.2020","09:23:25","403.46","32.13","130.45","9.99","4.01","40.08","Bruch Mitte"
+"Probe 7","18.09.2020","09:42:21","394.21","31.95","132.92","9.98","4.04","40.35","Bruch Mitte"
+"Probe 8","18.09.2020","10:02:36","497.21","34.95","158.92","9.97","4.01","40.00","Bruch Mitte"
+"Probe 9","18.09.2020","10:26:30","367.99","30.87","123.88","9.97","4.02","40.08","Bruch Mitte"
+"Probe 10","18.09.2020","10:45:35","636.65","34.49","154.33","9.98","4.03","40.20","Bruch Mitte"
+```
+
+6) You are done! Happy converting!
 
 # DOCKER
 Clone the repo with 
