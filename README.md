@@ -121,5 +121,7 @@ cd TablesToCSV
 Build and start the container.
 ```bash
 docker-compose build
+```
+```bash
 docker-compose up
 ```
