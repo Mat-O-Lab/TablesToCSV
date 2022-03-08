@@ -5,19 +5,19 @@ import os
 import zipfile
 from timeit import default_timer as timer
 
+import json
 import requests
-from pdf import coordinates_copy
-from pdf.converter_pdf import *
-from pdf.converter_pdf import OUTPUT_DIR
-from os import remove
+import Converter_Camelot
+from Converter_Camelot import *
+from Converter_Camelot import OUTPUT_DIR, INPUT_DIR
 from io import BytesIO
-from flask import flash, Flask, request, render_template, send_file, url_for, redirect
+from flask import flash, Flask, request, render_template, send_file, url_for, redirect, send_from_directory
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_wtf import FlaskForm
 from flask_bootstrap import Bootstrap
-from wtforms import StringField, SubmitField
+from wtforms import StringField, SubmitField, DecimalField, BooleanField
 
-from wtforms.validators import DataRequired, URL
+from wtforms.validators import DataRequired, URL, NumberRange
 
 
 from werkzeug.utils import secure_filename
@@ -25,6 +25,7 @@ from config import config
 
 ALLOWED_EXTENSIONS = {'xls', 'xlsx', 'pdf'}
 ACCURACY_THRESHOLD = 95 # percent
+TOGGLE = False
 config_name = os.environ.get("APP_MODE") or "development"
 
 app = Flask(__name__)
@@ -32,6 +33,7 @@ app.config.from_object(config[config_name])
 
 bootstrap = Bootstrap(app)
 
+logo = './static/resources/MatOLab-Logo.svg'
 
 SWAGGER_URL = "/api/docs"
 API_URL = "/static/swagger.json"
@@ -47,117 +49,163 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 class ExcelForm(FlaskForm):
     data_url = StringField("Excel to csv", validators=[DataRequired(), URL()], description='Paste URL to a excel file containing data-sheets')
 
-class PdfForm(FlaskForm):
-    data_url = StringField("Pdf to csv", validators=[DataRequired(), URL()], description='Paste URL to a text based pdf file containing tables')
-    settings = StringField("Settings", validators=[DataRequired(), URL()], description='Paste URL to a json settings file, matching the pdf')
+class PDF_automatic(FlaskForm):
+    data_url = StringField("URL to pdf file", validators=[DataRequired(), URL()],
+                           description='Paste URL to a text based pdf file containing tables')
+    settings = StringField("URL to .json settings file", validators=[DataRequired(), URL()],
+                           description='Paste URL to a settings .json file')
+    acc_threshold = DecimalField("Parse accuracy threshold", default=80, validators=[
+        NumberRange(min=0, max=100, message="please input a number in range 0-100")],
+                                 description="Parse results with an accuracy lower than the given threshold flash a warning message.")
+    submit = SubmitField("Start conversion")
+
+class PDF_manual(FlaskForm):
+    data_url = StringField("URL to pdf file", validators=[DataRequired(), URL()],
+                           description='Paste URL to a text based pdf file containing tables')
+    detect_small_lines = DecimalField("Detect small lines", validators=[DataRequired(), NumberRange(min=15, max=100,
+                                                                                                    message="please input numbers in range 15-100")],
+                                      description="Small lines can be detected by increasing this value: Range 15-100.")
+    cut_text = BooleanField("Cut text", default=False, description="cut text along column separators")
+    detect_superscripts = BooleanField("Detect Superscripts", default=False,
+                                       description="detect super and subscripts in table headers")
+    acc_threshold = DecimalField("Parse accuracy threshold", default=80, validators=[
+        NumberRange(min=0, max=100, message="please input a number in range 0-100")],
+                                 description="Parse results with an accuracy lower than the given threshold flash a warning message.")
     submit = SubmitField("Start Conversion")
+
+
+def clean_tmp_files():
+
+    # delete local temporary files
+    for dirname, subdirs, files in os.walk(OUTPUT_DIR):
+        for file in files:
+            os.remove(os.path.join(dirname, file))
+
+    for dirname, subdirs, files in os.walk(INPUT_DIR):
+        for file in files:
+            os.remove(os.path.join(dirname, file))
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    logo = './static/resources/MatOLab-Logo.svg'
-    start_form = ExcelForm()
-    pdf_form = PdfForm()
-    return render_template("index.html", logo=logo, start_form=start_form, pdf_form=pdf_form)
+    return render_template("index.html", logo=logo)
 
 @app.route("/excalibur", methods=["GET", "POST"])
 def excalibur():
     flash("redirect to excalibur webapp", "info")
-    return redirect(url_for("index"))
+    return redirect("https://pypi.org/project/excalibur-py/")
 
-@app.route("/api/pdf_to_csv", methods=["GET", "POST"])
-def pdf_to_csv():
-    if request.method == 'POST':
-        url = request.form.get("data_url")
-        settings = request.form.get("settings")
+@app.route("/toggle_manual", methods=["GET", "POST"])
+def toggle_manual():
+    return redirect(url_for("pdf_to_csv", manual=True))
 
-        if not url.endswith('.pdf'):
-            flash("cannot convert file with given extension!", "info")
-            return redirect(url_for("index"))
+@app.route("/toggle_automatic", methods=["GET", "POST"])
+def toggle_automatic():
+    return redirect(url_for("pdf_to_csv", manual=False))
 
-        if not settings.endswith('.json'):
-            flash("settings file was not given as .json file!", "info")
-            return redirect(url_for("index"))
+@app.route("/send_converted_files", methods=["GET", "POST"])
+def send_converted_files():
+    """
+    This method should only be called after conversion f a pdf file to respective csvs.
+    :return: sends the contents of TMP_OUT to the user.
+    """
+
+    # check if we have already sent the csvs, in which case, we have already deleted them...
+    if os.path.isdir(OUTPUT_DIR):
+        if not os.listdir(OUTPUT_DIR):
+            flash("App in faulty state, please reload the page and repeat your query.", "info")
+            # the output directory is empty, we have already sent and deleted the csvs
+            return redirect(url_for("pdf_to_csv", manual=False))
+
+
+    # collect the csvs into a .zip file, then send the zipfile to the user
+    memory_file = BytesIO()
+    with zipfile.ZipFile(memory_file, 'w') as zf:
+        for dirname, subdirs, files in os.walk(OUTPUT_DIR):
+            zf.write(dirname)
+            for filename in files:
+                zf.write(os.path.join(dirname, filename))
+    memory_file.seek(0)
+
+    return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
+
+
+
+@app.route("/api/pdf_to_csv/<manual>", methods=["GET", "POST"])
+def pdf_to_csv(manual):
+    # we have to parse the boolean value of manual
+    manual = True if manual=="True" else False
+
+    pdf_form = PDF_manual() if manual else PDF_automatic()
+
+    if pdf_form.validate_on_submit() and request.method == 'POST':
+
+        # clean out output directory, in case we have old csvs there.
+        clean_tmp_files()
 
         start = timer()
-        # we need to access the raw file from github, without html code
+        url = pdf_form.data_url.data
+
         if "github.com" in url:
             url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
 
-        if "github.com" in settings:
-            settings = settings.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+        if manual:
+            settings_dict = {
+                "split_text": pdf_form.cut_text.data,
+                "flag_size": pdf_form.detect_superscripts.data,
+                "line_size_scaling": pdf_form.detect_small_lines.data,
+                "accuracy_threshold": pdf_form.acc_threshold.data
+            }
+        else:
+
+            settings = pdf_form.settings.data
+
+            if not url.endswith('.pdf') or not settings.endswith(".json"):
+                flash("given urls resolve to files with wrong filetype!", "info")
+                return render_template("pdf2csv.html", pdf_form=pdf_form, manual=manual)
+
+                # we need to access the raw file from github, without html code
+
+            if "github.com" in settings:
+                settings = settings.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+
+            response = requests.get(settings)
+
+            settings_dict = json.load(BytesIO(response.content))
+            settings_dict["accuracy_threshold"] = pdf_form.acc_threshold.data
 
         pdf_filename = secure_filename(url.rsplit("/", maxsplit=1)[1])
-        settings_filename = secure_filename(settings.rsplit("/", maxsplit=1)[1])
-
 
         # write the files to local directory, the files are deleted again after conversion
         response = requests.get(url)
-        output = open(pdf_filename, 'wb')
+        output = open(os.path.join("TMP_PDF", pdf_filename), 'wb')
         output.write(response.content)
         output.close()
 
-        response = requests.get(settings)
-        output = open(settings_filename, 'wb')
-        output.write(response.content)
-        output.close()
+        success, parse_report = Converter_Camelot.main(pdf_filename, settings_dict)
 
-        # TODO: incorporate into converter_pdf
-        tables = coordinates_copy.main(pdf_filename)
-        accuracy_list = []
-        table_count = 0
-        for page, table_areas, image_size in tables:
-            bounding_box = convert_pixel_to_point(table_areas, image_size)
-            accuracy_dict = extract_tables(pdf_filename, settings_filename, page, bounding_box, table_count, False)
+        for (key, value) in parse_report:
+            flash(f"{key} {value}", "info")
 
-            for k,v in accuracy_dict.items():
-                if v <= ACCURACY_THRESHOLD:
-                    flash(f"parsing {k} was unsuccessful with an accuracy of {v}%", "warning")
-                    accuracy_list.append(v)
-
-            table_count += 1
-
-        # collect the csvs into a .zip file, then send the zipfile to the user
-        memory_file = BytesIO()
-        with zipfile.ZipFile(memory_file, 'w') as zf:
-            for dirname, subdirs, files in os.walk(OUTPUT_DIR):
-                zf.write(dirname)
-                for filename in files:
-                    zf.write(os.path.join(dirname, filename))
-        memory_file.seek(0)
-
-        # we're done with conversion, delete the local file.
-        remove(pdf_filename)
-        remove(settings_filename)
-
-        # remove all csvs in TMP_OUT
-        for dirname, subdirs, files in os.walk(OUTPUT_DIR):
-            for file in files:
-                os.remove(os.path.join(dirname, file))
-
-        # TODO: get accuracy, time out of conversion and flask message
         end = timer()
-        mean_accuracy = np.mean(np.array(accuracy_list))
-        time_seconds = end - start  #  millis
-        flash(f"completed conversion of {filename} in {time_seconds} seconds, \nwith a mean accuracy of {mean_accuracy}%", "info")
-        return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
+        return render_template("pdf2csv.html", pdf_form=pdf_form, send_file=success, manual=manual)
 
-    return redirect(url_for("index"))
+    return render_template("pdf2csv.html", pdf_form=pdf_form, manual=manual)
 
 
 @app.route("/api/xls_to_csv", methods=["GET", "POST"])
 def xls_to_csv():
-    if request.method == 'POST':
 
-        url = request.form.get("data_url")
+    excel_form = ExcelForm()
+
+    if excel_form.validate_on_submit() and request.method == 'POST':
+
+        url = excel_form.data_url.data
         
-        if not allowed_file(url):
+        if not url.endswith('.xls') and not url.endswith('.xlsx'):
             flash("cannot convert file with given extension!")
             return redirect(url_for("index"))
         
@@ -204,8 +252,8 @@ def xls_to_csv():
 
         # we're done with conversion, delete the local file.
         excel_file.close()
-        remove(filename)
+        os.remove(filename)
 
         return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
 
-    return redirect(url_for("index"))
+    return render_template("xls2csv.html", excel_form=excel_form)

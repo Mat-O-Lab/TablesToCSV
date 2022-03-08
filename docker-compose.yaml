@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   flask:
-    container_name: flask
+    container_name: Flask
     build: .
     volumes:
       - .:/app
