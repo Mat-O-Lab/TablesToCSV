@@ -212,7 +212,7 @@ class LocateTables:
 
     def main(self, filename, INPUT_DIR):
         # extracing images of a PDF
-        pages = convert_from_path(INPUT_DIR +"/"+ filename +".pdf", self.dpi, poppler_path =r".\poppler-21.11.0\Library\bin", grayscale=True)
+        pages = convert_from_path(INPUT_DIR +"/"+ filename +".pdf", self.dpi, grayscale=True)
         tables = []
         # for every page in a PDF
         for page, i in zip(pages, range(len(pages))):
