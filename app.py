@@ -11,7 +11,7 @@ import Converter_Camelot
 from Converter_Camelot import *
 from Converter_Camelot import OUTPUT_DIR, INPUT_DIR
 from io import BytesIO
-from flask import flash, Flask, request, render_template, send_file, url_for, redirect, send_from_directory
+from flask import flash, Flask, request, render_template, send_file, url_for, redirect, send_from_directory, jsonify
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_wtf import FlaskForm
 from flask_bootstrap import Bootstrap
@@ -256,8 +256,6 @@ def xls_to_csv():
         return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
 
     return render_template("xls2csv.html", excel_form=excel_form)
-<<<<<<< Updated upstream
-=======
 
 
 @app.route("/api/pdf2csv/<settings_input>", methods=["POST"])
@@ -366,6 +364,3 @@ def xls2csv():
     os.remove(filename)
 
     return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
-
-
->>>>>>> Stashed changes

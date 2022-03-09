@@ -58,32 +58,12 @@
       }
     },
     "/api/pdf_to_csv": {
-      "get": {
+      "post": {
         "tags": [
           "PDFToCSV"
         ],
         "summary": "Convert a textbased pdf file into a csv file",
         "description": "Returns a csv file containing all tables found in the pdf file.",
-<<<<<<< Updated upstream
-        "parameters": [
-          {
-            "in": "query",
-            "name": "url",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "settings",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "description": "Url to a pdf file"
-          }
-        ],
-=======
         "requestBody": {
           "required": true,
           "content": {
@@ -132,7 +112,6 @@
             }
           }
         },
->>>>>>> Stashed changes
         "responses": {
           "200": {
             "description": "A csv file containing all tables found inside the pdf file",
@@ -195,11 +174,13 @@
             "type": "integer",
             "required": true,
             "default": 15,
+            "example" : 15,
             "description": "Small lines can be detected by increasing this value. Range: 15-100"
           },
           "accuracy_threshold": {
             "type": "integer",
             "default": 80,
+            "example": 80,
             "required": false
           }
         }
