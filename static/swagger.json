@@ -19,24 +19,23 @@
     }
   ],
   "paths": {
-    "/api/xls_to_csv": {
-      "get": {
+    "/api/xls2csv": {
+      "post": {
         "tags": [
           "XLSToCSV"
         ],
-        "summary": "Convert the sheets of a xls file to many csv files",
+        "summary": "Convert the sheets of an excel file into respective csv files",
         "description": "Returns a .zip file, containing all sheets of the specified xls file as csv files.",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "url",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "description": "Url to a xls file"
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcelConversionRequest"
+              }
+            }
           }
-        ],
+        },
         "responses": {
           "200": {
             "description": "Zip file containing all csv sheets of the xls file at the specified url",
@@ -65,6 +64,7 @@
         ],
         "summary": "Convert a textbased pdf file into a csv file",
         "description": "Returns a csv file containing all tables found in the pdf file.",
+<<<<<<< Updated upstream
         "parameters": [
           {
             "in": "query",
@@ -83,6 +83,56 @@
             "description": "Url to a pdf file"
           }
         ],
+=======
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomaticPDFConversionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Zip file containing all tables found inside the pdf file",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "File not found."
+          },
+          "500": {
+            "description": "Internal server error, check the syntax of your diagram."
+          }
+        }
+      }
+    },
+    "/api/pdf2csv/manual": {
+      "post": {
+        "tags": [
+          "PDFToCSV"
+        ],
+        "summary": "Convert tables of a pdf file into many csv files",
+        "description": "Returns a csv file containing all tables found in the pdf file.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualPDFConversionRequest"
+              }
+            }
+          }
+        },
+>>>>>>> Stashed changes
         "responses": {
           "200": {
             "description": "A csv file containing all tables found inside the pdf file",
@@ -100,6 +150,84 @@
           },
           "500": {
             "description": "Internal server error, check the syntax of your diagram."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ExcelConversionRequest": {
+        "description": "Url to a xls or xlsx file",
+        "required": "true",
+        "type": "object",
+        "properties": {
+          "data_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://github.com/.../YOUR_XLS_FILE.xls"
+          }
+        }
+      },
+      "ManualPDFConversionRequest": {
+        "description": "Information to use for manual parsing of specified pdf file",
+        "required": true,
+        "type": "object",
+        "properties": {
+          "data_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://github.com/.../YOUR_PDF_FILE.pdf"
+          },
+          "split_text": {
+            "type": "boolean",
+            "default": true,
+            "required": true,
+            "description": "Cut text along column separators."
+          },
+          "flag_size": {
+            "type": "boolean",
+            "required": true,
+            "default": true,
+            "description": "Wheter to detect super- and sub-scripts in the text."
+          },
+          "line_size_scaling": {
+            "type": "integer",
+            "required": true,
+            "default": 15,
+            "description": "Small lines can be detected by increasing this value. Range: 15-100"
+          },
+          "accuracy_threshold": {
+            "type": "integer",
+            "default": 80,
+            "required": false
+          }
+        }
+      },
+      "AutomaticPDFConversionRequest": {
+        "description": "Information to use for automatic parsing of specified pdf file",
+        "required": true,
+        "type": "object",
+        "properties": {
+          "data_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://github.com/Mat-O-Lab/TablesToCSV/blob/PDF-to-CSV/PDFtoCSV/PDFs/C85C_1.pdf",
+            "required": true,
+            "description": "URL of a pdf file you want to convert"
+          },
+          "settings": {
+            "type": "string",
+            "format" : "uri",
+            "required": true,
+            "example" : "https://github.com/Mat-O-Lab/TablesToCSV/blob/PDF-to-CSV/PDFtoCSV/settings/C85C_1.json",
+            "description": "Settings file describing how to parse the given pdf file."
+          },
+          "accuracy_threshold": {
+            "type": "integer",
+            "default": 80,
+            "example" : 80,
+            "required": false
           }
         }
       }

@@ -25,7 +25,6 @@ from config import config
 
 ALLOWED_EXTENSIONS = {'xls', 'xlsx', 'pdf'}
 ACCURACY_THRESHOLD = 95 # percent
-TOGGLE = False
 config_name = os.environ.get("APP_MODE") or "development"
 
 app = Flask(__name__)
@@ -257,3 +256,116 @@ def xls_to_csv():
         return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
 
     return render_template("xls2csv.html", excel_form=excel_form)
+<<<<<<< Updated upstream
+=======
+
+
+@app.route("/api/pdf2csv/<settings_input>", methods=["POST"])
+def pdf2csv(settings_input):
+
+    if settings_input.lower() not in ["manual", "automatic"]:
+        return jsonify({"parse_report" : ["error, please choose either manual or automatic"]})
+
+    resp = request.get_json()
+    settings_dict = {}
+
+    # clean out output directory, in case we have old csvs there.
+    clean_tmp_files()
+
+    url = resp["data_url"]
+
+    if "github.com" in url:
+        url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+
+    if settings_input.lower() == "manual":
+        settings_dict = {
+        "split_text": resp["split_text"],
+        "flag_size": resp["flag_size"],
+        "line_size_scaling": resp["line_size_scaling"],
+        "accuracy_threshold": resp["acccuracy_threshold"]}
+    else:
+        settings = resp["settings"]
+        if "github.com" in settings:
+            settings = settings.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+
+        response = requests.get(settings)
+        settings_dict = json.load(BytesIO(response.content))
+        settings_dict["accuracy_threshold"] = resp["accuracy_threshold"] if resp["accuracy_threshold"] is not None else 80
+
+
+    pdf_filename = secure_filename(url.rsplit("/", maxsplit=1)[1])
+
+    # write the files to local directory, the files are deleted again after conversion
+    response = requests.get(url)
+    with open(os.path.join("TMP_PDF", pdf_filename), 'wb') as file:
+        file.write(response.content)
+
+    success, parse_report = Converter_Camelot.main(pdf_filename, settings_dict)
+    if success:
+
+        # collect the csvs into a .zip file, then send the zipfile to the user
+        memory_file = BytesIO()
+        with zipfile.ZipFile(memory_file, 'w') as zf:
+            for dirname, subdirs, files in os.walk(OUTPUT_DIR):
+                zf.write(dirname)
+                for filename in files:
+                    zf.write(os.path.join(dirname, filename))
+        memory_file.seek(0)
+        return send_file(memory_file, attachment_filename=f'{pdf_filename}.zip', as_attachment=True)
+    else:
+        return jsonify({"parse_report" : parse_report})
+
+@app.route("/api/xls2csv", methods=["POST"])
+def xls2csv():
+    resp = request.get_json()
+
+    if resp is None or resp["data_url"] is None:
+        return None
+
+    url = resp["data_url"]
+
+    if "github.com" in url:
+        url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+
+    filename = secure_filename(url.rsplit("/", maxsplit=1)[1])
+
+    # write the file to local directory, the file is deleted again after conversion
+    response = requests.get(url)
+    output = open(filename, 'wb')
+    output.write(response.content)
+    output.close()
+
+    excel_file = pd.ExcelFile(filename)
+
+    memory_file = BytesIO()
+
+    # for each input file, create sheets, for each sheet, try to add csv to zipfile
+
+    with zipfile.ZipFile(memory_file, 'w') as zf:
+
+        prefix = filename.replace(".xls", "")
+
+        for sheetname in excel_file.sheet_names:
+
+            try:
+                df = pd.read_excel(excel_file, sheetname)
+                plain_text = df.to_csv(index=False)
+
+                tmp = secure_filename(prefix + "_" + sheetname + ".csv")
+                zf.writestr(zinfo_or_arcname=tmp, data=plain_text)
+
+            except:
+                # sometimes, excel sheets can't be turned into csv files,e.g. when
+                # the excel sheet contains a diagram. In this case, omit the current sheet
+                continue
+
+    memory_file.seek(0)
+
+    # we're done with conversion, delete the local file.
+    excel_file.close()
+    os.remove(filename)
+
+    return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
+
+
+>>>>>>> Stashed changes
