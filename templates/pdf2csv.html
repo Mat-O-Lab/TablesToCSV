@@ -47,7 +47,7 @@
           Tool for mapping pdf data sheets to csv files.
       </p>
 
-      <form class='pb-3' method="post" action="{{ url_for('pdf_to_csv', manual=manual) }}">
+      <form class='pb-3' method="post" action="{{ url_for('pdf_to_csv', settings_input=settings_input) }}">
         {{ pdf_form.hidden_tag() }}
         <div class="form-group mb-3" >
             {{ pdf_form.data_url.label(class='form-control-label') }}
@@ -65,7 +65,7 @@
             <div class="form-text">{{ pdf_form.data_url.description }}</div>
         </div>
 
-        {% if manual %}
+        {% if settings_input == "manual" %}
             <div class="form-group mb-3" >
                 {{ pdf_form.detect_small_lines.label(class='form-control-label') }}
                     {% if pdf_form.detect_small_lines.errors %}
@@ -133,7 +133,7 @@
         <button class="form-group btn btn-primary btn-lg" type="submit" >Create settings file</button>
     </form>
 
-   {% if manual %}
+   {% if settings_input == "manual" %}
     <form class='pb-3' method="post" action="{{ url_for('toggle_automatic') }}">
         <button class="form-group btn btn-primary btn-lg" type="submit" >Toggle to automatic parsing</button>
     </form>

@@ -57,7 +57,7 @@
         }
       }
     },
-    "/api/pdf_to_csv": {
+    "/api/pdf2csv/automatic": {
       "post": {
         "tags": [
           "PDFToCSV"

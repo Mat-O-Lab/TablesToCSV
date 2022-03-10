@@ -99,11 +99,11 @@ def excalibur():
 
 @app.route("/toggle_manual", methods=["GET", "POST"])
 def toggle_manual():
-    return redirect(url_for("pdf_to_csv", manual=True))
+    return redirect(url_for("pdf_to_csv", settings_input="manual"))
 
 @app.route("/toggle_automatic", methods=["GET", "POST"])
 def toggle_automatic():
-    return redirect(url_for("pdf_to_csv", manual=False))
+    return redirect(url_for("pdf_to_csv", settings_input="automatic"))
 
 @app.route("/send_converted_files", methods=["GET", "POST"])
 def send_converted_files():
@@ -117,7 +117,7 @@ def send_converted_files():
         if not os.listdir(OUTPUT_DIR):
             flash("App in faulty state, please reload the page and repeat your query.", "info")
             # the output directory is empty, we have already sent and deleted the csvs
-            return redirect(url_for("pdf_to_csv", manual=False))
+            return redirect(url_for("pdf_to_csv", settings_input="automatic"))
 
 
     # collect the csvs into a .zip file, then send the zipfile to the user
@@ -132,12 +132,12 @@ def send_converted_files():
     return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
 
 
+@app.route("/pdf_to_csv/<settings_input>", methods=["GET", "POST"])
+def pdf_to_csv(settings_input):
+    if settings_input.lower() not in ["manual", "automatic"]:
+        return render_template("pdf2csv.html", pdf_form=PDF_automatic(), send_file=False, settings_input=False)
 
-@app.route("/api/pdf_to_csv/<manual>", methods=["GET", "POST"])
-def pdf_to_csv(manual):
-    # we have to parse the boolean value of manual
-    manual = True if manual=="True" else False
-
+    manual = True if settings_input.lower() == "manual" else False
     pdf_form = PDF_manual() if manual else PDF_automatic()
 
     if pdf_form.validate_on_submit() and request.method == 'POST':
@@ -164,7 +164,7 @@ def pdf_to_csv(manual):
 
             if not url.endswith('.pdf') or not settings.endswith(".json"):
                 flash("given urls resolve to files with wrong filetype!", "info")
-                return render_template("pdf2csv.html", pdf_form=pdf_form, manual=manual)
+                return render_template("pdf2csv.html", pdf_form=pdf_form, settings_input=settings_input)
 
                 # we need to access the raw file from github, without html code
 
@@ -190,31 +190,31 @@ def pdf_to_csv(manual):
             flash(f"{key} {value}", "info")
 
         end = timer()
-        return render_template("pdf2csv.html", pdf_form=pdf_form, send_file=success, manual=manual)
+        flash("Conversion terminated " + ("successfully" if success else "unsuccessfully") + f"in {end - start} seconds.", "info" if success else "warning")
 
-    return render_template("pdf2csv.html", pdf_form=pdf_form, manual=manual)
+        return render_template("pdf2csv.html", pdf_form=pdf_form, send_file=success, settings_input=settings_input)
+
+    return render_template("pdf2csv.html", pdf_form=pdf_form, settings_input=settings_input)
 
 
-@app.route("/api/xls_to_csv", methods=["GET", "POST"])
+@app.route("/xls_to_csv", methods=["GET", "POST"])
 def xls_to_csv():
-
     excel_form = ExcelForm()
 
     if excel_form.validate_on_submit() and request.method == 'POST':
 
         url = excel_form.data_url.data
-        
+
         if not url.endswith('.xls') and not url.endswith('.xlsx'):
             flash("cannot convert file with given extension!")
             return redirect(url_for("index"))
-        
+
         # we need to access the raw file from github, without html code
         if "github.com" in url:
             url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
 
-
         filename = secure_filename(url.rsplit("/", maxsplit=1)[1])
-        
+
         # write the file to local directory, the file is deleted again after conversion
         response = requests.get(url)
         output = open(filename, 'wb')
@@ -223,7 +223,6 @@ def xls_to_csv():
 
         excel_file = pd.ExcelFile(filename)
 
-        
         memory_file = BytesIO()
 
         # for each input file, create sheets, for each sheet, try to add csv to zipfile
@@ -231,7 +230,7 @@ def xls_to_csv():
         with zipfile.ZipFile(memory_file, 'w') as zf:
 
             prefix = filename.replace(".xls", "")
-            
+
             for sheetname in excel_file.sheet_names:
 
                 try:
@@ -248,7 +247,6 @@ def xls_to_csv():
 
         memory_file.seek(0)
 
-
         # we're done with conversion, delete the local file.
         excel_file.close()
         os.remove(filename)
@@ -256,7 +254,6 @@ def xls_to_csv():
         return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
 
     return render_template("xls2csv.html", excel_form=excel_form)
-
 
 @app.route("/api/pdf2csv/<settings_input>", methods=["POST"])
 def pdf2csv(settings_input):
@@ -280,7 +277,7 @@ def pdf2csv(settings_input):
         "split_text": resp["split_text"],
         "flag_size": resp["flag_size"],
         "line_size_scaling": resp["line_size_scaling"],
-        "accuracy_threshold": resp["acccuracy_threshold"]}
+        "accuracy_threshold": resp["accuracy_threshold"]}
     else:
         settings = resp["settings"]
         if "github.com" in settings:
