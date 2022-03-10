@@ -25,7 +25,7 @@ from config import config
 
 ALLOWED_EXTENSIONS = {'xls', 'xlsx', 'pdf'}
 ACCURACY_THRESHOLD = 95 # percent
-config_name = os.environ.get("APP_MODE") or "development"
+config_name = os.environ.get("APP_MODE") or "production"
 
 app = Flask(__name__)
 app.config.from_object(config[config_name])
@@ -361,3 +361,7 @@ def xls2csv():
     os.remove(filename)
 
     return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
+
+@app.route("/redirect_to_api", methods=["GET"])
+def redirect_to_api():
+    return redirect(SWAGGER_URL)
