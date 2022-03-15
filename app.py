@@ -11,7 +11,7 @@ import Converter_Camelot
 from Converter_Camelot import *
 from Converter_Camelot import OUTPUT_DIR, INPUT_DIR
 from io import BytesIO
-from flask import flash, Flask, request, render_template, send_file, url_for, redirect, send_from_directory
+from flask import flash, Flask, request, render_template, send_file, url_for, redirect, send_from_directory, jsonify
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_wtf import FlaskForm
 from flask_bootstrap import Bootstrap
@@ -100,11 +100,11 @@ def excalibur():
 
 @app.route("/toggle_manual", methods=["GET", "POST"])
 def toggle_manual():
-    return redirect(url_for("pdf_to_csv", manual=True))
+    return redirect(url_for("pdf_to_csv", settings_input="manual"))
 
 @app.route("/toggle_automatic", methods=["GET", "POST"])
 def toggle_automatic():
-    return redirect(url_for("pdf_to_csv", manual=False))
+    return redirect(url_for("pdf_to_csv", settings_input="automatic"))
 
 @app.route("/send_converted_files", methods=["GET", "POST"])
 def send_converted_files():
@@ -118,7 +118,7 @@ def send_converted_files():
         if not os.listdir(OUTPUT_DIR):
             flash("App in faulty state, please reload the page and repeat your query.", "info")
             # the output directory is empty, we have already sent and deleted the csvs
-            return redirect(url_for("pdf_to_csv", manual=False))
+            return redirect(url_for("pdf_to_csv", settings_input="automatic"))
 
 
     # collect the csvs into a .zip file, then send the zipfile to the user
@@ -134,11 +134,12 @@ def send_converted_files():
 
 
 
-@app.route("/api/pdf_to_csv/<manual>", methods=["GET", "POST"])
-def pdf_to_csv(manual):
-    # we have to parse the boolean value of manual
-    manual = True if manual=="True" else False
+@app.route("/pdf_to_csv/<settings_input>", methods=["GET", "POST"])
+def pdf_to_csv(settings_input):
+    if settings_input.lower() not in ["manual", "automatic"]:
+        return render_template("pdf2csv.html", pdf_form=PDF_automatic(), send_file=False, settings_input=False)
 
+    manual = True if settings_input.lower() == "manual" else False
     pdf_form = PDF_manual() if manual else PDF_automatic()
 
     if pdf_form.validate_on_submit() and request.method == 'POST':
@@ -165,7 +166,7 @@ def pdf_to_csv(manual):
 
             if not url.endswith('.pdf') or not settings.endswith(".json"):
                 flash("given urls resolve to files with wrong filetype!", "info")
-                return render_template("pdf2csv.html", pdf_form=pdf_form, manual=manual)
+                return render_template("pdf2csv.html", pdf_form=pdf_form, settings_input=settings_input)
 
                 # we need to access the raw file from github, without html code
 
@@ -191,12 +192,14 @@ def pdf_to_csv(manual):
             flash(f"{key} {value}", "info")
 
         end = timer()
-        return render_template("pdf2csv.html", pdf_form=pdf_form, send_file=success, manual=manual)
+        flash(f"conversion terminated in {end - start} seconds.", "info")
 
-    return render_template("pdf2csv.html", pdf_form=pdf_form, manual=manual)
+        return render_template("pdf2csv.html", pdf_form=pdf_form, send_file=success, settings_input=settings_input)
+
+    return render_template("pdf2csv.html", pdf_form=pdf_form, settings_input=settings_input)
 
 
-@app.route("/api/xls_to_csv", methods=["GET", "POST"])
+@app.route("/xls_to_csv", methods=["GET", "POST"])
 def xls_to_csv():
 
     excel_form = ExcelForm()
@@ -257,3 +260,61 @@ def xls_to_csv():
         return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
 
     return render_template("xls2csv.html", excel_form=excel_form)
+
+
+@app.route("/api/pdf2csv/<settings_input>", methods=["POST"])
+def pdf2csv(settings_input):
+
+    if settings_input.lower() not in ["manual", "automatic"]:
+        return None
+
+    resp = request.get_json()
+    settings_dict = {}
+
+    # clean out output directory, in case we have old csvs there.
+    clean_tmp_files()
+
+    url = resp["data_url"]
+
+    if "github.com" in url:
+        resp["data_url"] = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+
+    if settings_input.lower() == "manual":
+        settings_dict = {
+        "split_text": resp["cut_text"],
+        "flag_size": resp["detect_superscripts"],
+        "line_size_scaling": resp["detect_small_lines"],
+        "accuracy_threshold": resp["acc_threshold"]}
+    else:
+        settings = resp["settings"]
+        if "github.com" in settings:
+            settings = settings.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+
+            response = requests.get(settings)
+            settings_dict = json.load(BytesIO(response.content))
+            settings_dict["accuracy_threshold"] = resp["acc_threshold"] if resp["acc_threshold"] is not None else 80
+
+
+    pdf_filename = secure_filename(url.rsplit("/", maxsplit=1)[1])
+
+    # write the files to local directory, the files are deleted again after conversion
+    response = requests.get(url)
+    output = open(os.path.join("TMP_PDF", pdf_filename), 'wb')
+    output.write(response.content)
+    output.close()
+
+    success, parse_report = Converter_Camelot.main(pdf_filename, settings_dict)
+    if success:
+
+        # collect the csvs into a .zip file, then send the zipfile to the user
+        memory_file = BytesIO()
+        with zipfile.ZipFile(memory_file, 'w') as zf:
+            for dirname, subdirs, files in os.walk(OUTPUT_DIR):
+                zf.write(dirname)
+                for filename in files:
+                    zf.write(os.path.join(dirname, filename))
+        memory_file.seek(0)
+        return jsonify({"parse_report" : parse_report, "data" : memory_file })
+    else:
+        return jsonify({"parse_report" : parse_report, "data" : None})
+
