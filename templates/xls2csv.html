@@ -27,7 +27,7 @@
       </a>
 </header>
 {% with messages = get_flashed_messages(with_categories=true) %}
-    <div class="container-fluid collapse {% if messages%} show {% endif %}" id="mappingForm">
+    <div class="container-fluid collapse {% if messages%} show {% endif %}">
         <div class="card card-body">
             {% if messages %}
             {% for category, message in messages %}
