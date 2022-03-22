@@ -192,10 +192,10 @@ def pdf_to_csv(settings_input):
         end = timer()
         flash("Conversion terminated " + ("successfully" if success else "unsuccessfully") + f"in {end - start} seconds.", "info" if success else "warning")
 
+
         return render_template("pdf2csv.html", pdf_form=pdf_form, send_file=success, settings_input=settings_input)
 
     return render_template("pdf2csv.html", pdf_form=pdf_form, settings_input=settings_input)
-
 
 @app.route("/xls_to_csv", methods=["GET", "POST"])
 def xls_to_csv():
@@ -261,6 +261,7 @@ def pdf2csv(settings_input):
     if settings_input.lower() not in ["manual", "automatic"]:
         return jsonify({"parse_report" : ["error, please choose either manual or automatic"]})
 
+
     resp = request.get_json()
     settings_dict = {}
 
@@ -278,6 +279,7 @@ def pdf2csv(settings_input):
         "flag_size": resp["flag_size"],
         "line_size_scaling": resp["line_size_scaling"],
         "accuracy_threshold": resp["accuracy_threshold"]}
+
     else:
         settings = resp["settings"]
         if "github.com" in settings:
@@ -288,12 +290,14 @@ def pdf2csv(settings_input):
         settings_dict["accuracy_threshold"] = resp["accuracy_threshold"] if resp["accuracy_threshold"] is not None else 80
 
 
+
     pdf_filename = secure_filename(url.rsplit("/", maxsplit=1)[1])
 
     # write the files to local directory, the files are deleted again after conversion
     response = requests.get(url)
     with open(os.path.join("TMP_PDF", pdf_filename), 'wb') as file:
         file.write(response.content)
+
 
     success, parse_report = Converter_Camelot.main(pdf_filename, settings_dict)
     if success:
@@ -306,6 +310,7 @@ def pdf2csv(settings_input):
                 for filename in files:
                     zf.write(os.path.join(dirname, filename))
         memory_file.seek(0)
+
         return send_file(memory_file, attachment_filename=f'{pdf_filename}.zip', as_attachment=True)
     else:
         return jsonify({"parse_report" : parse_report})

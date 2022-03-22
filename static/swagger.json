@@ -62,7 +62,7 @@
         "tags": [
           "PDFToCSV"
         ],
-        "summary": "Convert a textbased pdf file into a csv file",
+        "summary": "Convert tables of a pdf file into many csv files",
         "description": "Returns a csv file containing all tables found in the pdf file.",
         "requestBody": {
           "required": true,
@@ -114,9 +114,78 @@
         },
         "responses": {
           "200": {
-            "description": "A csv file containing all tables found inside the pdf file",
+            "description": "Zip file containing all tables found inside the pdf file",
             "content": {
-              "application/csv": {
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "File not found."
+          },
+          "500": {
+            "description": "Internal server error, check the syntax of your diagram."
+          }
+        }
+      }
+    },
+    "/api/pdf2csv/manual": {
+      "post": {
+        "tags": [
+          "PDFToCSV"
+        ],
+        "summary": "Convert tables of a pdf file into many csv files",
+        "description": "Returns a csv file containing all tables found in the pdf file.",
+        "parameters": [
+          {
+            "in" : "query",
+            "name": "url",
+            "type" : "string",
+            "required": true,
+            "description": "URL to a pdf file"
+          },
+          {
+            "in": "query",
+            "name": "split_text",
+            "type" : "boolean",
+            "default": true,
+            "required": true,
+            "description": "Cut text along column separators."
+          },
+          {
+            "in": "query",
+            "name": "flag_size",
+            "type" : "boolean",
+            "required": true,
+            "default": true,
+            "description": "Wheter to detect super- and sub-scripts in the text."
+          },
+          {
+            "in": "query",
+            "name": "line_size_scaling",
+            "required": true,
+            "default": 15,
+            "description": "Small lines can be detected by increasing this value. Range: 15-100",
+            "type": "integer"
+          },
+          {
+            "in" : "query",
+            "name" : "accuracy_threshold",
+            "type": "integer",
+            "default": 80,
+            "required": false
+          }
+
+        ],
+        "responses": {
+          "200": {
+            "description": "Zip file containing all tables found inside the pdf file",
+            "content": {
+              "application/zip": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
