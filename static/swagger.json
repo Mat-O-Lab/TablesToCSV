@@ -22,7 +22,7 @@
     "/api/xls2csv": {
       "post": {
         "tags": [
-          "XLSToCSV"
+          "XLStoCSV"
         ],
         "summary": "Convert the sheets of an excel file into respective csv files",
         "description": "Returns a .zip file, containing all sheets of the specified xls file as csv files.",
@@ -38,13 +38,10 @@
         },
         "responses": {
           "200": {
-            "description": "Zip file containing all csv sheets of the xls file at the specified url",
+            "description": "json-object containing all csv sheets of the xls file as key value pairs",
             "content": {
-              "application/zip": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
+              "application/json": {
+                "$ref": "#/components/schemas/XLSConversionResponse"
               }
             }
           },
@@ -63,7 +60,7 @@
           "PDFToCSV"
         ],
         "summary": "Convert tables of a pdf file into many csv files",
-        "description": "Returns a csv file containing all tables found in the pdf file.",
+        "description": "Returns a json-object containing all tables found in the pdf file.",
         "requestBody": {
           "required": true,
           "content": {
@@ -76,12 +73,11 @@
         },
         "responses": {
           "200": {
-            "description": "Zip file containing all tables found inside the pdf file",
+            "description": "json containing all tables found inside the pdf file",
             "content": {
-              "application/zip": {
+              "application/json": {
                 "schema": {
-                  "type": "string",
-                  "format": "binary"
+                  "$ref": "#/components/schemas/PDFConversionResponse"
                 }
               }
             }
@@ -101,7 +97,7 @@
           "PDFToCSV"
         ],
         "summary": "Convert tables of a pdf file into many csv files",
-        "description": "Returns a csv file containing all tables found in the pdf file.",
+        "description": "Returns a json-object containing all tables found in the pdf file.",
         "requestBody": {
           "required": true,
           "content": {
@@ -114,12 +110,11 @@
         },
         "responses": {
           "200": {
-            "description": "Zip file containing all tables found inside the pdf file",
+            "description": "json containing all tables found inside the pdf file",
             "content": {
-              "application/zip": {
+              "application/json": {
                 "schema": {
-                  "type": "string",
-                  "format": "binary"
+                  "$ref": "#/components/schemas/PDFConversionResponse"
                 }
               }
             }
@@ -136,6 +131,27 @@
   },
   "components": {
     "schemas": {
+      "XLSConversionResponse" : {
+        "description" : "json-object containing names of tables together with their corresponding csv as key-value pairs.",
+        "type" : "object",
+        "properties" : {
+          "data" : {
+            "type" : "dictionary"
+          }
+        }
+      },
+      "PDFConversionResponse" : {
+        "description" : "object containing parse report and names of tables together with their corresponding csv as key-value pairs.",
+        "type" : "object",
+        "properties" : {
+          "data" : {
+            "type" : "dictionary"
+          },
+          "parse_report" : {
+            "type" : "dictionary"
+          }
+        }
+      },
       "ExcelConversionRequest": {
         "description": "Url to a xls or xlsx file",
         "required": "true",

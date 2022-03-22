@@ -229,7 +229,7 @@ def xls_to_csv():
 
         with zipfile.ZipFile(memory_file, 'w') as zf:
 
-            prefix = filename.replace(".xls", "")
+            prefix = filename.replace(".xls", "").replace(".xlsx", "")
 
             for sheetname in excel_file.sheet_names:
 
@@ -300,20 +300,17 @@ def pdf2csv(settings_input):
 
 
     success, parse_report = Converter_Camelot.main(pdf_filename, settings_dict)
+
+    data = {}
+
     if success:
+        for dirname, subdirs, files in os.walk(OUTPUT_DIR):
+            for filename in files:
+                with open(os.path.join(OUTPUT_DIR, filename), 'r') as file:
+                    data[filename.split(".")[0]] = file.read()
 
-        # collect the csvs into a .zip file, then send the zipfile to the user
-        memory_file = BytesIO()
-        with zipfile.ZipFile(memory_file, 'w') as zf:
-            for dirname, subdirs, files in os.walk(OUTPUT_DIR):
-                zf.write(dirname)
-                for filename in files:
-                    zf.write(os.path.join(dirname, filename))
-        memory_file.seek(0)
+    return jsonify({"data": data, "parse_report": parse_report})
 
-        return send_file(memory_file, attachment_filename=f'{pdf_filename}.zip', as_attachment=True)
-    else:
-        return jsonify({"parse_report" : parse_report})
 
 @app.route("/api/xls2csv", methods=["POST"])
 def xls2csv():
@@ -337,35 +334,28 @@ def xls2csv():
 
     excel_file = pd.ExcelFile(filename)
 
-    memory_file = BytesIO()
+    ret = {}
 
-    # for each input file, create sheets, for each sheet, try to add csv to zipfile
+    prefix = filename.replace(".xls", "").replace(".xlsx", "")
 
-    with zipfile.ZipFile(memory_file, 'w') as zf:
+    for sheetname in excel_file.sheet_names:
+        try:
+            df = pd.read_excel(excel_file, sheetname)
+            plain_text = df.to_csv(index=False)
 
-        prefix = filename.replace(".xls", "")
+            key = secure_filename(prefix + "_" + sheetname)
+            ret[key] = plain_text
 
-        for sheetname in excel_file.sheet_names:
-
-            try:
-                df = pd.read_excel(excel_file, sheetname)
-                plain_text = df.to_csv(index=False)
-
-                tmp = secure_filename(prefix + "_" + sheetname + ".csv")
-                zf.writestr(zinfo_or_arcname=tmp, data=plain_text)
-
-            except:
-                # sometimes, excel sheets can't be turned into csv files,e.g. when
-                # the excel sheet contains a diagram. In this case, omit the current sheet
-                continue
-
-    memory_file.seek(0)
+        except:
+            # sometimes, excel sheets can't be turned into csv files,e.g. when
+            # the excel sheet contains a diagram. In this case, omit the current sheet
+            continue
 
     # we're done with conversion, delete the local file.
     excel_file.close()
     os.remove(filename)
 
-    return send_file(memory_file, attachment_filename='result.zip', as_attachment=True)
+    return jsonify(ret)
 
 @app.route("/redirect_to_api", methods=["GET"])
 def redirect_to_api():
