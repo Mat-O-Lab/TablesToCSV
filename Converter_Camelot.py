@@ -92,8 +92,8 @@ def main(pdf_name, settings):
         # get coordinates from tables
         coord = Coordinates.LocateTables()
         tables, dpi = coord.main(pdf_name, INPUT_DIR)
-    except:
-        parse_report.append((pdf_name, "An error occured: LocateTables"))
+    except Exception as e:
+        parse_report.append((pdf_name, e))
         return False, parse_report
 
     table_count = 0
@@ -110,8 +110,8 @@ def main(pdf_name, settings):
         # extracting tables with camelot
         try:
             found_table = extract_tables(pdf_name, page, bounding_box, table_count, parse_report, line_size_scaling, split_text, flag_size, accuracy_threshold)
-        except:
-            parse_report.append((pdf_name, "An error occured: Camelot"))
+        except Exception as e:
+            parse_report.append((pdf_name, e))
             return False, parse_report
         if found_table:
             table_count += 1
