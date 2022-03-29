@@ -118,10 +118,7 @@ Change to the cloned directory
 ```bash
 cd TablesToCSV
 ```
-Build and start the container.
-```bash
-docker-compose build
-```
+Start the docker container.
 ```bash
 docker-compose up
 ```
