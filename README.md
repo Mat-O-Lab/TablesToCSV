@@ -79,10 +79,10 @@ to a number of CSV files with the help of a JSON settings file. Alternatively, w
 we do not have a settings.json file at our disposal. (click on the links to view the files)
 
 1) An example of a PDF file can be seen under this URL:
-https://github.com/Mat-O-Lab/TablesToCSV/blob/PDF-to-CSV/PDFtoCSV/PDFs/C85C_1.pdf
+https://github.com/Mat-O-Lab/TablesToCSV/blob/development/examples/C85C_1.pdf
 
 2) An example of a settings file can be seen here:
-https://github.com/Mat-O-Lab/TablesToCSV/blob/PDF-to-CSV/PDFtoCSV/settings/C85C_1.json
+https://github.com/Mat-O-Lab/TablesToCSV/blob/development/examples/settings.json
 
 3) We provide these URLs to the web app and hit the "Start conversion" Button.
 ![example](https://user-images.githubusercontent.com/72997461/156362496-86da985b-8bd4-4ae1-97d6-052ac01ffe7d.png)
