@@ -54,7 +54,7 @@ class PDF_automatic(FlaskForm):
                            description='Paste URL to a text based pdf file containing tables')
     settings = StringField("URL to .json settings file", validators=[DataRequired(), URL()],
                            description='Paste URL to a settings .json file')
-    acc_threshold = DecimalField("Parse accuracy threshold", default=80, validators=[
+    acc_threshold = DecimalField("Parse accuracy threshold", default=70, validators=[
         NumberRange(min=0, max=100, message="please input a number in range 0-100")],
                                  description="Parse results with an accuracy lower than the given threshold flash a warning message.")
     submit = SubmitField("Start conversion")
@@ -62,13 +62,13 @@ class PDF_automatic(FlaskForm):
 class PDF_manual(FlaskForm):
     data_url = StringField("URL to pdf file", validators=[DataRequired(), URL()],
                            description='Paste URL to a text based pdf file containing tables')
-    detect_small_lines = DecimalField("Detect small lines", validators=[DataRequired(), NumberRange(min=15, max=100,
+    detect_small_lines = DecimalField("Detect small lines", validators=[NumberRange(min=15, max=100, default=15,
                                                                                                     message="please input numbers in range 15-100")],
                                       description="Small lines can be detected by increasing this value: Range 15-100.")
-    cut_text = BooleanField("Cut text", default=False, description="cut text along column separators")
+    cut_text = BooleanField("Cut text", default=True, description="cut text along column separators")
     detect_superscripts = BooleanField("Detect Superscripts", default=False,
                                        description="detect super and subscripts in table headers")
-    acc_threshold = DecimalField("Parse accuracy threshold", default=80, validators=[
+    acc_threshold = DecimalField("Parse accuracy threshold", default=70, validators=[
         NumberRange(min=0, max=100, message="please input a number in range 0-100")],
                                  description="Parse results with an accuracy lower than the given threshold flash a warning message.")
     submit = SubmitField("Start Conversion")
