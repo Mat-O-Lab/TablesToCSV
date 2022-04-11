@@ -4,6 +4,9 @@ WORKDIR /app
 
 COPY . .
 
+RUN mkdir -p TMP_PDF
+RUN mkdir -p TMP_OUT
+
 RUN apt-get update
 RUN apt-get install ffmpeg libsm6 libxext6 -y
 RUN apt-get install poppler-utils -y

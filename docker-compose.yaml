@@ -4,8 +4,6 @@ services:
   flask:
     container_name: Flask
     build: .
-    volumes:
-      - .:/app
     ports:
       - 5000:5000
     restart: always
