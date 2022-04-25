@@ -173,6 +173,14 @@ def pdf_to_csv(settings_input):
 
             response = requests.get(settings)
 
+            if response.status_code != 200:
+                flash(f"Request for your settings file terminated with code {response.status_code}, failed for reason: {response.reason}.",
+                      "warning")
+                flash(
+                    f"You may check your URL for validity, please also make sure you are using REGULAR github links e.g. \"github.com/yourproject/file.json\".",
+                    "info")
+                return render_template("pdf2csv.html", pdf_form=pdf_form, settings_input=settings_input)
+
             settings_dict = json.load(BytesIO(response.content))
             settings_dict["accuracy_threshold"] = pdf_form.acc_threshold.data
 
@@ -180,6 +188,14 @@ def pdf_to_csv(settings_input):
 
         # write the files to local directory, the files are deleted again after conversion
         response = requests.get(url)
+
+        if response.status_code != 200:
+            flash(f"Request for your pdf terminated with code {response.status_code}, failed for reason: {response.reason}.",
+                  "warning")
+            flash(f"You may check your URL for validity, please also make sure you are using REGULAR github links e.g. \"github.com/yourproject/file.pdf\".", "info")
+
+            return render_template("pdf2csv.html", pdf_form=pdf_form, settings_input=settings_input)
+
         output = open(os.path.join("TMP_PDF", pdf_filename), 'wb')
         output.write(response.content)
         output.close()
