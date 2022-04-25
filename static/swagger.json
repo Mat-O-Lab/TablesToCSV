@@ -172,7 +172,7 @@
           "data_url": {
             "type": "string",
             "format": "uri",
-            "example": "https://github.com/.../YOUR_PDF_FILE.pdf"
+            "example": "https://github.com/Mat-O-Lab/TablesToCSV/blob/development/examples/z_Nachlieferung_Mat_C_RT.zs2%20-%20Standardprotokoll.pdf"
           },
           "split_text": {
             "type": "boolean",
@@ -209,7 +209,7 @@
           "data_url": {
             "type": "string",
             "format": "uri",
-            "example": "https://github.com/Mat-O-Lab/TablesToCSV/blob/PDF-to-CSV/PDFtoCSV/PDFs/C85C_1.pdf",
+            "example": "https://github.com/Mat-O-Lab/TablesToCSV/blob/development/examples/z_Nachlieferung_Mat_C_RT.zs2%20-%20Standardprotokoll.pdf",
             "required": true,
             "description": "URL of a pdf file you want to convert"
           },
@@ -217,7 +217,7 @@
             "type": "string",
             "format" : "uri",
             "required": true,
-            "example" : "https://github.com/Mat-O-Lab/TablesToCSV/blob/PDF-to-CSV/PDFtoCSV/settings/C85C_1.json",
+            "example" : "https://github.com/Mat-O-Lab/TablesToCSV/blob/development/examples/settings.json",
             "description": "Settings file describing how to parse the given pdf file."
           },
           "accuracy_threshold": {
